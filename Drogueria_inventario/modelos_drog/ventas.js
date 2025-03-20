@@ -1,0 +1,32 @@
+const mongoose = require('mongoose');
+
+const ventaSchema = new mongoose.Schema({
+  tipoVenta: { 
+    type: String, 
+    required: true, 
+    enum: ['mostrador', 'cliente'] 
+  },
+  cliente: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Cliente', 
+    required: function() { return this.tipoVenta === 'cliente'; } 
+  }, // Cliente opcional si es venta por mostrador
+  productos: [{
+    producto: { type: mongoose.Schema.Types.ObjectId, ref: 'Producto', required: true },
+    descripcion: { type: String, required: true },
+    cantidad: { type: Number, required: true, min: 1 },
+    tipoVenta: { type: String, required: true, enum: ['unidad', 'caja'] },
+    precioUnitario: { type: Number, required: true, min: 0 },
+    subtotal: { type: Number, required: true, min: 0 }
+  }],
+  total: { type: Number, required: true, min: 0 },
+  pago: {
+    metodo: { type: String, required: true, enum: ['efectivo', 'credito'] },
+    montoPagado: { type: Number, required: function() { return this.pago.metodo === 'efectivo'; } },
+    cambio: { type: Number, default: 0 }
+  },
+  observaciones: { type: String }, // Campo opcional para notas en la venta
+  fecha: { type: Date, default: Date.now }
+});
+
+module.exports = mongoose.model('Venta', ventaSchema);
