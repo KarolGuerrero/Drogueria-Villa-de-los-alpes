@@ -12,10 +12,9 @@ const ventaSchema = new mongoose.Schema({
     required: function() { return this.tipoVenta === 'cliente'; } 
   }, // Cliente opcional si es venta por mostrador
   productos: [{
-    producto: { type: mongoose.Schema.Types.ObjectId, ref: 'Producto', required: true },
+    codigoBarras: { type: String, required: true },
     descripcion: { type: String, required: true },
     cantidad: { type: Number, required: true, min: 1 },
-    tipoVenta: { type: String, required: true, enum: ['unidad', 'caja'] },
     precioUnitario: { type: Number, required: true, min: 0 },
     subtotal: { type: Number, required: true, min: 0 }
   }],
