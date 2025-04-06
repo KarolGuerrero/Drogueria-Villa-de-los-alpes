@@ -6,6 +6,7 @@
         <li><router-link to="/inventario">Inventario</router-link></li>
         <li><router-link to="/clientes">Clientes</router-link></li>
         <li><router-link to="/reportes">Reportes</router-link></li>
+        <li><router-link to="/vendedores">Vendedores</router-link></li>
       </ul>
       <div class="usuario">
         <button @click="verAlertas">
@@ -30,7 +31,7 @@ export default {
   data() {
     return {
       isAuthenticated: false,
-      nombreUsuario: "Usuario",
+      nombreUsuario: this.nombreUsuario,
       showDropdown: false,
     };
   },
@@ -48,7 +49,7 @@ export default {
     },
     checkAuthStatus() {
       this.isAuthenticated = !!localStorage.getItem('user');
-      this.nombreUsuario = localStorage.getItem('usuario') || "Usuario";
+      this.nombreUsuario = localStorage.getItem(this.nombreUsuario) || "Usuario";
     },
     logout() {
       localStorage.removeItem('user');
