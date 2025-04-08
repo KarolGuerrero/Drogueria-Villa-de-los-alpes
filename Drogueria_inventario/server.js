@@ -11,6 +11,7 @@ const Ventas = require('./modelos_drog/ventas.js');
 const Productos = require('./modelos_drog/productos.js');
 const Clientes = require('./modelos_drog/clientes.js');
 const { importarExcel, upload } = require('./modelos_drog/importExcel');
+const productos = require('./modelos_drog/productos.js');
 
 
 const app = express();
@@ -542,7 +543,7 @@ app.post('/api/producto/factura', async (req, res) => {
     // Iteramos sobre los productos enviados en la solicitud
     for (const item of productos) {
       // Buscamos el producto en la base de datos usando el código de barras
-      const producto = await Productos.findOne({ codigoBarras: item.codigoBarras });
+      const producto = await productos.findOne({ codigoBarras: item.codigoBarras });
 
       // Si el producto no existe, devolvemos un error
       if (!producto) {
@@ -614,6 +615,112 @@ app.post('/api/producto/factura', async (req, res) => {
 });
 
 //---------------------------------------------------------------------------------------------
+
+
+// Endpoint para estadísticas de inventario
+app.get('/api/estadisticas/inventario', async (req, res) => {
+  try {
+    // Obtener filtros de fecha opcionales de los parámetros de consulta
+    const { fechaInicio, fechaFin } = req.query;
+    
+    // Construir filtro de fecha si se proporcionan fechas
+    const dateFilter = {};
+    if (fechaInicio || fechaFin) {
+      dateFilter.fecha = {};
+      if (fechaInicio) dateFilter.fecha.$gte = new Date(fechaInicio);
+      if (fechaFin) dateFilter.fecha.$lte = new Date(fechaFin);
+    }
+
+    // Obtener estadísticas de ventas de productos
+    const ventasStats = await Ventas.aggregate([
+      { $match: dateFilter },
+      { $unwind: '$productos' },
+      { $group: {
+          _id: '$productos.codigoBarras',
+          descripcion: { $first: '$productos.descripcion' },
+          cantidadVendida: { $sum: '$productos.cantidad' },
+          ingresoTotal: { $sum: { $multiply: ['$productos.cantidad', '$productos.precioUnitario'] } },
+          ventasCount: { $sum: 1 }
+      }},
+      { $sort: { cantidadVendida: -1 } },
+      { $limit: 10 } // Limitar a los 10 productos más vendidos
+    ]);
+
+    // Obtener niveles de inventario actuales
+    const inventarioActual = await Productos.find({}, {
+      codigoBarras: 1,
+      descripcion: 1,
+      cantidadStock: 1,
+      precioVenta: 1,
+      precioCompra: 1,
+      fechaVencimiento: 1,
+      _id: 0
+    }).sort({ cantidadStock: 1 }); // Ordenar por cantidad en stock ascendente
+    
+    // Obtener ventas por método de pago
+    const metodosPago = await Ventas.aggregate([
+      { $match: dateFilter },
+      { $group: {
+          _id: '$pago.metodo',
+          total: { $sum: '$total' },
+          count: { $sum: 1 }
+      }}
+    ]);
+    
+    // Total de ventas en el período
+    const ventasTotales = await Ventas.aggregate([
+      { $match: dateFilter },
+      { $group: {
+          _id: null,
+          total: { $sum: '$total' },
+          count: { $sum: 1 }
+      }}
+    ]);
+
+    // Productos con bajo stock (menos de 10 unidades)
+    const bajoStock = inventarioActual.filter(p => p.cantidadStock < 10);
+    
+    // Productos próximos a vencer (en los próximos 30 días)
+    const hoy = new Date();
+    const treintaDiasDespues = new Date();
+    treintaDiasDespues.setDate(hoy.getDate() + 30);
+    
+    const productosProximosVencer = inventarioActual.filter(p => {
+      const fechaVencimiento = new Date(p.fechaVencimiento);
+      return fechaVencimiento >= hoy && fechaVencimiento <= treintaDiasDespues && p.cantidadStock > 0;
+    });
+
+    // Estadísticas de tipo de venta (mostrador vs cliente)
+    const ventasPorTipo = await Ventas.aggregate([
+      { $match: dateFilter },
+      { $group: {
+          _id: '$tipoVenta',
+          total: { $sum: '$total' },
+          count: { $sum: 1 }
+      }}
+    ]);
+
+    res.json({
+      ventasProductos: ventasStats,
+      inventarioActual,
+      metodosPago,
+      ventasTotales: ventasTotales[0] || { total: 0, count: 0 },
+      bajoStock,
+      productosProximosVencer,
+      ventasPorTipo
+    });
+
+  } catch (error) {
+    console.error("Error al obtener estadísticas:", error);
+    res.status(500).json({ 
+      error: "Error al obtener estadísticas", 
+      detalle: error.message 
+    });
+  }
+});
+
+
+//--------------------------------------------------------------------------------------------
 
 //---------------------------------------------------------------------------------------------
 // Configuración del servidor
