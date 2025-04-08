@@ -212,11 +212,6 @@ app.get('/api/producto/uno', async (req, res) => {
     if (!codigoBarras ) {
       return res.status(400).json({ error: "Debe proporcionar código de barras" });
     }
-
-    /*const filtro = {};
-    if (codigoBarras) filtro.codigoBarras = codigoBarras;
-    if (descripcion) filtro.descripcion = { $regex: descripcion, $options: 'i' }; // Búsqueda parcial e insensible a mayúsculas
-    */
     const producto = await Productos.findOne({codigoBarras:codigoBarras});
 
     if (!producto) {
@@ -330,15 +325,13 @@ app.delete('/api/producto/eliminar', async (req, res) => {
       return res.status(400).send({ error: "Debe proporcionar un motivo para la eliminación." });
     }
 
-    const producto = await Productos.findOneAndDelete(codigoBarras);
+    const producto = await Productos.findOneAndDelete({codigoBarras:codigoBarras});
 
     if (!producto) {
       return res.status(404).send({ error: "Producto no encontrado." });
     }
 
-    console.log(`Procucto eliminado. codigoBarras: ${producto.descripcion}, Motivo: ${motivo}`);
-
-    res.send({ mensaje: "Producto eliminado con éxito.", producto, motivo });
+    res.send({ mensaje: `Producto ${producto.descripcion} fue eliminado por este Motivo: ${motivo}` });
   } catch (error) {
     res.status(500).send({ error: "Error al eliminar el Producto", detalles: error.message });
   }
