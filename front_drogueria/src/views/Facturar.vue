@@ -266,8 +266,8 @@ export default {
           rol: '' 
         };
       }
-    },
-    obtenerFechaHora() {
+     },
+      obtenerFechaHora() {
       const ahora = new Date();
       
       // Formato de fecha: DD/MM/YYYY

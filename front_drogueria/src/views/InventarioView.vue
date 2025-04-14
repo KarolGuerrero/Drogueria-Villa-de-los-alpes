@@ -5,7 +5,7 @@
     <!-- Botones de navegación -->
     <div class="button-container">
       <button 
-        v-for="(option, key) in options" 
+        v-for="(option, key) in filteredOptions" 
         :key="key" 
         @click="activeOption = key"
         class="nav-button"
@@ -126,81 +126,129 @@
         </div>
       </div>
     </div>
-
-    <!-- Registrar Venta -->
-    <div v-if="activeOption === 'venta'" class="bg-white p-4 shadow rounded">
-      <h2 class="text-xl font-bold mb-4">Registrar Venta</h2>
-      <input v-model="codigoVenta" placeholder="Código de Barras" class="input-field">
-      <input v-model.number="cantidadVenta" type="number" placeholder="Cantidad Vendida" class="input-field">
-      <button @click="registrarVenta" class="btn-primary">Registrar Venta</button>
-    </div>
-
-    <!-- Consultar Ventas -->
-    <div v-if="activeOption === 'ventas'" class="bg-white p-4 shadow rounded">
-      <h2 class="text-xl font-bold mb-4">Consultar Ventas por Fecha</h2>
-      <input v-model="fechaConsulta" type="date" class="input-field">
-      <button @click="consultarVentasPorFecha" class="btn-primary">Consultar</button>
-      <div v-if="ventas.length">
-        <table class="w-full border-collapse mt-4">
-          <thead>
-            <tr class="bg-gray-200">
-              <th class="border px-4 py-2">Código</th>
-              <th class="border px-4 py-2">Cantidad</th>
-              <th class="border px-4 py-2">Fecha</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="venta in ventas" :key="venta._id">
-              <td class="border px-4 py-2">{{ venta.codigoBarras }}</td>
-              <td class="border px-4 py-2">{{ venta.cantidad }}</td>
-              <td class="border px-4 py-2">{{ venta.fecha }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
   </div>
 </template>
 
-  
-  <script>
-  import axios from "axios";
-  
-  export default {
-    data() {
-      return {
-        activeOption: null,
-        cantidadAjuste: 0,
-        producto: {
-          codigoBarras: "",
-          descripcion: "",
-          cantidadStock: null,
-          precioCompra: null,
-          precioVenta: null,
-          fechaVencimiento: ""
-        },
-        productos: [],
-        codigoBusqueda: "",
-        productoEncontrado: null,
-        codigoModificar: "",
-        productoModificar: null,
-        codigoEliminar: "",
-        motivo: "",
-        codigoStock: "",
-        productoStock: null,
-        options: {
-          crear: { label: "Crear Producto" },
-          reporte: { label: "Reporte Inventario" },
-          buscar: { label: "Buscar Producto" },
-          modificar: { label: "Modificar Producto" },
-          eliminar: { label: "Eliminar Producto" },
-          stock: {label: "Añadir Stock"}
-        }
-      };
+<script>
+import axios from "axios";
+
+export default {
+  data() {
+    return {
+      activeOption: null,
+      cantidadAjuste: 0,
+      producto: {
+        codigoBarras: "",
+        descripcion: "",
+        cantidadStock: null,
+        precioCompra: null,
+        precioVenta: null,
+        fechaVencimiento: ""
+      },
+      productos: [],
+      codigoBusqueda: "",
+      productoEncontrado: null,
+      codigoModificar: "",
+      productoModificar: null,
+      codigoEliminar: "",
+      motivo: "",
+      codigoStock: "",
+      productoStock: null,
+      usuarioActual: {
+        id: null,
+        nombre: "",
+        rol: ""
+      },
+      options: {
+        crear: { label: "Crear Producto" },
+        reporte: { label: "Reporte Inventario" },
+        buscar: { label: "Buscar Producto" },
+        modificar: { label: "Modificar Producto" },
+        eliminar: { label: "Eliminar Producto" },
+        stock: { label: "Añadir Stock" }
+      }
+    };
+  },
+  computed: {
+    // Filtra las opciones según el rol del usuario
+    filteredOptions() {
+      // Si el usuario es vendedor, excluir modificar, reporte y eliminar
+      if (this.usuarioActual.rol === "vendedor") {
+        const filteredOpts = { ...this.options };
+        delete filteredOpts.modificar;
+        delete filteredOpts.reporte;
+        delete filteredOpts.eliminar;
+        return filteredOpts;
+      }
+      // Para todos los demás roles, mostrar todas las opciones
+      return this.options;
     },
-    methods: {
-    // Nuevo método para buscar producto antes de ajustar stock
+    // Establece la opción activa por defecto basada en las opciones disponibles
+    defaultActiveOption() {
+      return Object.keys(this.filteredOptions)[0] || null;
+    }
+  },
+  created() {
+    // Obtener información del usuario actual al cargar el componente
+    this.obtenerUsuarioActual();
+    
+    // Establecer la opción activa por defecto después de obtener el usuario
+    this.$nextTick(() => {
+      if (!this.activeOption || !this.filteredOptions[this.activeOption]) {
+        this.activeOption = this.defaultActiveOption;
+      }
+    });
+  },
+  watch: {
+    // Observe cambios en las opciones filtradas y ajuste la opción activa si es necesario
+    filteredOptions: {
+      handler(newOptions) {
+        // Si la opción activa ya no está disponible, cambiar a la primera opción disponible
+        if (this.activeOption && !newOptions[this.activeOption]) {
+          this.activeOption = this.defaultActiveOption;
+        }
+      },
+      deep: true
+    }
+  },
+  methods: {
+    obtenerUsuarioActual() {
+      try {
+        const token = localStorage.getItem("token");
+        if (token) {
+          try {
+            const payload = JSON.parse(atob(token.split(".")[1]));
+            this.usuarioActual = {
+              id: payload.id || null,
+              nombre: payload.nombre || payload.id || "Usuario",
+              rol: payload.rol || ""
+            };
+          } catch (error) {
+            console.error("Token inválido:", error);
+            this.usuarioActual = { 
+              id: null, 
+              nombre: 'Error de Autenticación', 
+              rol: '' 
+            };
+          }
+        } else {
+          // Si no hay token en localStorage
+          console.warn("No se encontró token de autenticación");
+          this.usuarioActual = { 
+            id: null, 
+            nombre: 'Usuario No Autenticado', 
+            rol: '' 
+          };
+        }
+      } catch (error) {
+        console.error('Error al obtener el usuario actual:', error);
+        this.usuarioActual = { 
+          id: null, 
+          nombre: 'Usuario Desconocido', 
+          rol: '' 
+        };
+      }
+    },
     async buscarProductoStock() {
       if (!this.codigoStock) {
         alert("Ingrese un código de Barras");
@@ -256,35 +304,35 @@
         alert("Hubo un error al actualizar el stock");
       }
     },
-      async crearProducto() {
-        try{
+    async crearProducto() {
+      try {
         await axios.post("http://localhost:3001/api/producto/crear", this.producto);
         alert("Producto creado");
         this.limpiarFormulario();
       } catch (error) {
-          console.error("Error al crear el producto:", error.response?.data || error.message);
-          alert("Error: " + (error.response?.data?.error || error.message));
-          this.limpiarFormulario();
-        }
+        console.error("Error al crear el producto:", error.response?.data || error.message);
+        alert("Error: " + (error.response?.data?.error || error.message));
+        this.limpiarFormulario();
+      }
     },
-      async obtenerProductos() {
-        const res = await axios.get("http://localhost:3001/api/producto/todos");
-        this.productos = res.data;
-      },
-      async buscarProducto() {
-        const res = await axios.get(`http://localhost:3001/api/producto/uno?codigoBarras=${this.codigoBusqueda}`);
-        this.productoEncontrado = res.data;
-      },
-      async cargarProductoModificar() {
-        const res = await axios.get(`http://localhost:3001/api/producto/uno?codigoBarras=${this.codigoModificar}`);
-        this.productoModificar = res.data;
-      },
-      async modificarProducto() {
-        await axios.put("http://localhost:3001/api/producto/modificar", this.productoModificar);
-        alert("Producto modificado");
-      },
-      async eliminarProducto() {
-    if (confirm("¿Estás seguro de eliminar este producto?")) {
+    async obtenerProductos() {
+      const res = await axios.get("http://localhost:3001/api/producto/todos");
+      this.productos = res.data;
+    },
+    async buscarProducto() {
+      const res = await axios.get(`http://localhost:3001/api/producto/uno?codigoBarras=${this.codigoBusqueda}`);
+      this.productoEncontrado = res.data;
+    },
+    async cargarProductoModificar() {
+      const res = await axios.get(`http://localhost:3001/api/producto/uno?codigoBarras=${this.codigoModificar}`);
+      this.productoModificar = res.data;
+    },
+    async modificarProducto() {
+      await axios.put("http://localhost:3001/api/producto/modificar", this.productoModificar);
+      alert("Producto modificado");
+    },
+    async eliminarProducto() {
+      if (confirm("¿Estás seguro de eliminar este producto?")) {
         try {
           const res = await axios.delete("http://localhost:3001/api/producto/eliminar", {
             data: { codigoBarras: this.codigoEliminar, motivo: this.motivo }
@@ -301,65 +349,64 @@
         this.motivo = '';
       }
     },
-        exportarCSV() {
-    if (this.productos.length === 0) {
+    exportarCSV() {
+      if (this.productos.length === 0) {
         alert("No hay productos para exportar.");
         return;
-    }
+      }
 
-    // Definir separador: usa "," o ";" según la configuración regional de Excel
-    const separador = ","; 
+      // Definir separador: usa "," o ";" según la configuración regional de Excel
+      const separador = ","; 
 
-    // Encabezados
-    const headers = ["Código de Barras", "Descripción", "Cantidad en Stock", "Precio Compra", "Precio Venta"];
+      // Encabezados
+      const headers = ["Código de Barras", "Descripción", "Cantidad en Stock", "Precio Compra", "Precio Venta"];
 
-    // Crear filas de datos asegurando que las descripciones estén entre comillas
-    const filas = this.productos.map(p => [
+      // Crear filas de datos asegurando que las descripciones estén entre comillas
+      const filas = this.productos.map(p => [
         p.codigoBarras,
         `"${p.descripcion}"`,  // Se usan comillas para evitar problemas con comas dentro del texto
         p.cantidadStock,
         p.precioCompra,
         p.precioVenta
-    ]);
+      ]);
 
-    // Unir los datos en formato CSV
-    const contenidoCSV = [
+      // Unir los datos en formato CSV
+      const contenidoCSV = [
         headers.join(separador),  // Encabezados
         ...filas.map(fila => fila.join(separador))  // Datos
-    ].join("\n");
+      ].join("\n");
 
-    // Convertir el contenido a UTF-8 con BOM para evitar problemas con caracteres especiales
-    const BOM = "\uFEFF";
-    const blob = new Blob([BOM + contenidoCSV], { type: "text/csv;charset=utf-8;" });
+      // Convertir el contenido a UTF-8 con BOM para evitar problemas con caracteres especiales
+      const BOM = "\uFEFF";
+      const blob = new Blob([BOM + contenidoCSV], { type: "text/csv;charset=utf-8;" });
 
-    // Crear un enlace de descarga dinámico
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "reporte_inventario.csv"; // Nombre del archivo
+      // Crear un enlace de descarga dinámico
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "reporte_inventario.csv"; // Nombre del archivo
 
-    // Agregar el enlace al documento y hacer clic automáticamente
-    document.body.appendChild(link);
-    link.click();
+      // Agregar el enlace al documento y hacer clic automáticamente
+      document.body.appendChild(link);
+      link.click();
 
-    // Eliminar el enlace después de la descarga
-    document.body.removeChild(link);
+      // Eliminar el enlace después de la descarga
+      document.body.removeChild(link);
     },
-
-      limpiarFormulario() {
-        this.producto = {
-          codigoBarras: "",
-          descripcion: "",
-          cantidadStock: null,
-          precioCompra: null,
-          precioVenta: null,
-          fechaVencimiento: ""
-        };
-      }
+    limpiarFormulario() {
+      this.producto = {
+        codigoBarras: "",
+        descripcion: "",
+        cantidadStock: null,
+        precioCompra: null,
+        precioVenta: null,
+        fechaVencimiento: ""
+      };
     }
-  };
-  </script>
-  
-  <style>
+  }
+};
+</script>
+
+<style>
 /* Campos de entrada */
 .input-field {
   display: block;

@@ -100,7 +100,7 @@ app.post('/api/login', async (req, res) => {
     const token1 =  jwt.sign(
       { id: nombreUsuario, rol: rol }, 
       JWT_SECRET, // Aquí pones tu clave secreta
-      { expiresIn: '15h' }
+      { expiresIn: '5m' }
     );
     
     res.json({
@@ -578,6 +578,13 @@ app.post('/api/producto/factura', async (req, res) => {
       if (!cliente) {
         return res.status(404).json({ error: 'Cliente no encontrado' });
       }
+
+        // (cliente.id y cliente.nombre)
+      datosCliente = {
+        id: cliente.idCliente,
+        nombre: cliente.nombre
+      };
+
     }
 
     let total = 0; // Variable para calcular el total de la factura
@@ -592,15 +599,6 @@ app.post('/api/producto/factura', async (req, res) => {
       if (!producto) {
         return res.status(404).json({ error: `Producto con código ${item.codigoBarras} no encontrado` });
       }
-
-      const Cliente = await Clientes.findOne({ idCliente: cliente });
-
-      // Si el producto no existe, devolvemos un error
-      if (!Cliente) {
-        return res.status(404).json({ error: `Cliente  ${Cliente.nombre} no encontrado` });
-      }
-
-
       // Validamos que haya suficiente stock para vender la cantidad solicitada
       if (producto.cantidadStock < item.cantidad) {
         return res.status(400).json({ error: `Stock insuficiente para ${producto.descripcion}` });
@@ -644,7 +642,7 @@ app.post('/api/producto/factura', async (req, res) => {
     // Creamos la nueva factura en la base de datos
     const nuevaFactura = new Ventas({
       tipoVenta, // "mostrador" o "cliente"
-      cliente: tipoVenta === 'cliente' ? cliente : null, // Solo se guarda el cliente si es una venta de cliente
+      cliente: tipoVenta === 'cliente' ? datosCliente : undefined, // Solo se guarda el cliente si es una venta de cliente
       productos: productosProcesados, // Lista de productos con detalles
       total, // Total de la factura
       pago: {
@@ -665,6 +663,32 @@ app.post('/api/producto/factura', async (req, res) => {
         { codigoBarras: item.codigoBarras },
         { $inc: { cantidadStock: -item.cantidad } }
       );
+    }
+
+    if (tipoVenta === 'cliente' && pago.metodo === 'credito') {
+      // Buscar cliente por idCliente
+      const clienteEncontrado = await Clientes.findOne({ idCliente: datosCliente.id });
+    
+      if (!clienteEncontrado) {
+        return res.status(404).json({ error: 'Cliente no encontrado para registrar deuda' });
+      }
+    
+      // Generar número de factura (puedes usar el _id de la venta o un contador)
+      const numeroFactura = nuevaFactura._id.toString();
+    
+      const productosDeuda = productosProcesados.map(p => ({
+        nombre: p.descripcion,
+        cantidad: p.cantidad,
+        Deuda: p.subtotal
+      }));
+    
+      // Actualizar el campo de crédito
+      clienteEncontrado.credito = {
+        numeroFactura,
+        productos: productosDeuda
+      };
+    
+      await clienteEncontrado.save();
     }
 
     // Enviamos la respuesta con la información de la venta
