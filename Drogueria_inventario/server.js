@@ -593,6 +593,14 @@ app.post('/api/producto/factura', async (req, res) => {
         return res.status(404).json({ error: `Producto con código ${item.codigoBarras} no encontrado` });
       }
 
+      const Cliente = await Clientes.findOne({ idCliente: cliente });
+
+      // Si el producto no existe, devolvemos un error
+      if (!Cliente) {
+        return res.status(404).json({ error: `Cliente  ${Cliente.nombre} no encontrado` });
+      }
+
+
       // Validamos que haya suficiente stock para vender la cantidad solicitada
       if (producto.cantidadStock < item.cantidad) {
         return res.status(400).json({ error: `Stock insuficiente para ${producto.descripcion}` });
@@ -631,13 +639,12 @@ app.post('/api/producto/factura', async (req, res) => {
     let montoPagado = pago.metodo === 'efectivo' ? pago.montoPagado || 0 : 0;
     let cambio = montoPagado - total > 0 ? montoPagado - total : 0;
 
+
+
     // Creamos la nueva factura en la base de datos
     const nuevaFactura = new Ventas({
       tipoVenta, // "mostrador" o "cliente"
-      cliente: tipoVenta === 'cliente' ? {
-        id: cliente.idCliente, // ID del cliente
-        nombre: cliente.nombre // Nombre del cliente
-      } : null, // Solo se guarda el cliente si es una venta de cliente
+      cliente: tipoVenta === 'cliente' ? cliente : null, // Solo se guarda el cliente si es una venta de cliente
       productos: productosProcesados, // Lista de productos con detalles
       total, // Total de la factura
       pago: {

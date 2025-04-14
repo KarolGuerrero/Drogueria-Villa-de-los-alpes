@@ -34,7 +34,7 @@
       <h2 class="text-xl font-bold mb-4">Reporte de Inventario</h2>
       <button @click="obtenerProductos" class="btn-primary mb-4">Cargar Productos</button>
       <button @click="exportarCSV" class="btn-secondary mb-4">Exportar CSV</button>
-      <table class="w-full border-collapse">
+      <table class="inventory-table">
         <thead>
           <tr class="bg-gray-200">
             <th class="border px-4 py-2">Código</th>
@@ -52,6 +52,9 @@
             <td class="border px-4 py-2">{{ p.precioCompra }}</td>
             <td class="border px-4 py-2">{{ p.precioVenta }}</td>
           </tr>
+            <tr v-if="productos.length === 0">
+              <td colspan="5" class="no-data">No hay productos para mostrar.</td>
+            </tr>
         </tbody>
       </table>
     </div>
@@ -96,9 +99,32 @@
     <!-- Añadir Stock -->
     <div v-if="activeOption === 'stock'" class="bg-white p-4 shadow rounded">
       <h2 class="text-xl font-bold mb-4">Añadir Stock</h2>
-      <input v-model="codigoStock" placeholder="Código de Barras" class="input-field">
-      <input v-model.number="cantidadAjuste" type="number" placeholder="Cantidad a agregar" class="input-field">
-      <button @click="ajustarStock" class="btn-primary">Añadir al Stock</button>
+      <!-- Paso 1: Buscar el producto -->
+      <div v-if="!productoStock" class="mb-4">
+        <div class="flex gap-2">
+          <input v-model="codigoStock" placeholder="Código de Barras" class="input-field flex-grow">
+          <button @click="buscarProductoStock" class="btn-primary flex-shrink-0">Buscar</button>
+        </div>
+      </div>
+      
+      <!-- Paso 2: Mostrar información del producto y añadir stock -->
+      <div v-if="productoStock" class="mt-4">
+        <h3 class="font-semibold mb-2">Información del Producto</h3>
+        <div class="bg-gray-100 p-3 rounded mb-4">
+          <p><strong>Código:</strong> {{ productoStock.codigoBarras }}</p>
+          <p><strong>Descripción:</strong> {{ productoStock.descripcion }}</p>
+          <p><strong>Stock Actual:</strong> {{ productoStock.cantidadStock }}</p>
+          <p><strong>Precio Compra:</strong> {{ productoStock.precioCompra }}</p>
+          <p><strong>Precio Venta:</strong> {{ productoStock.precioVenta }}</p>
+        </div>
+        
+        <h3 class="font-semibold mb-2">Ajustar Stock</h3>
+        <input v-model.number="cantidadAjuste" type="number" placeholder="Cantidad a agregar" class="input-field">
+        <div class="flex gap-2 mt-2">
+          <button @click="ajustarStock" class="btn-primary">Añadir al Stock</button>
+          <button @click="cancelarAjuste" class="btn-secondary">Cancelar</button>
+        </div>
+      </div>
     </div>
 
     <!-- Registrar Venta -->
@@ -162,6 +188,7 @@
         codigoEliminar: "",
         motivo: "",
         codigoStock: "",
+        productoStock: null,
         options: {
           crear: { label: "Crear Producto" },
           reporte: { label: "Reporte Inventario" },
@@ -173,41 +200,62 @@
       };
     },
     methods: {
-        async ajustarStock() {
-    if (this.cantidadAjuste > 0 && this.codigoStock) {
-        try {
-            // 1. Obtener el producto con el código de barras ingresado
-            const res = await axios.get(`http://localhost:3001/api/producto/uno?codigoBarras=${this.codigoStock}`);
-            const producto = res.data;
-
-            if (!producto) {
-                alert("Producto no encontrado");
-                return;
-            }
-
-            // 2. Sumar la cantidad al stock actual
-            producto.cantidadStock += this.cantidadAjuste;
-
-            // 3. Enviar la actualización al backend
-            await axios.put("http://localhost:3001/api/producto/modificar", producto);
-
-            alert("Stock actualizado correctamente");
-
-            // 4. Limpiar los campos
-            this.cantidadAjuste = 0;
-            this.codigoStock = "";
-        } catch (error) {
-            console.error("Error al actualizar el stock:", error);
-            alert("Hubo un error al actualizar el stock");
-                }
-            } else {
-                if (!this.codigoStock) {
-                    alert("Ingrese un código de Barras");
-                } else {
-                    alert("Ingrese una cantidad válida");
-                }
-            }
-        },
+    // Nuevo método para buscar producto antes de ajustar stock
+    async buscarProductoStock() {
+      if (!this.codigoStock) {
+        alert("Ingrese un código de Barras");
+        return;
+      }
+      
+      try {
+        const res = await axios.get(`http://localhost:3001/api/producto/uno?codigoBarras=${this.codigoStock}`);
+        if (res.data) {
+          this.productoStock = res.data;
+          this.cantidadAjuste = 0; // Reset cantidad
+        } else {
+          alert("Producto no encontrado");
+        }
+      } catch (error) {
+        console.error("Error al buscar el producto:", error);
+        alert("Hubo un error al buscar el producto");
+      }
+    },
+    
+    // Método para cancelar el ajuste
+    cancelarAjuste() {
+      this.productoStock = null;
+      this.codigoStock = "";
+      this.cantidadAjuste = 0;
+    },
+    
+    // Método modificado para ajustar stock
+    async ajustarStock() {
+      if (!this.productoStock) {
+        alert("Primero debe buscar un producto");
+        return;
+      }
+      
+      if (this.cantidadAjuste <= 0) {
+        alert("Ingrese una cantidad válida mayor a cero");
+        return;
+      }
+      
+      try {
+        // Actualizar cantidad en el objeto local
+        this.productoStock.cantidadStock += this.cantidadAjuste;
+        
+        // Enviar la actualización al backend
+        await axios.put("http://localhost:3001/api/producto/modificar", this.productoStock);
+        
+        alert("Stock actualizado correctamente");
+        
+        // Reiniciar formulario
+        this.cancelarAjuste();
+      } catch (error) {
+        console.error("Error al actualizar el stock:", error);
+        alert("Hubo un error al actualizar el stock");
+      }
+    },
       async crearProducto() {
         try{
         await axios.post("http://localhost:3001/api/producto/crear", this.producto);
@@ -410,5 +458,91 @@
 
 .btn-danger:hover {
   background-color: #b91c1c;
+}
+</style>
+
+<style scoped>
+.inventory-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #fff;
+}
+
+.inventory-table thead {
+  background-color: #f5f5f5;
+}
+
+.inventory-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-weight: 600;
+  font-size: 14px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.inventory-table td {
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #333;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.inventory-table tbody tr:hover {
+  background-color: #e2e2ff;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.reporte-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 14px;
+  color: #374151;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.reporte-table th,
+.reporte-table td {
+  padding: 12px 16px;
+  border: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+.reporte-table thead {
+  background-color: #4f46e5;
+  color: white;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.reporte-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.reporte-table tbody tr:hover {
+  background-color: #f1f5f9;
+  transition: background-color 0.3s ease;
+}
+
+.reporte-table td.text-center {
+  text-align: center;
+}
+
+/* Estilo para cuando no hay productos */
+.reporte-table .no-data {
+  text-align: center;
+  padding: 20px;
+  color: #6b7280;
+  font-style: italic;
 }
 </style>
