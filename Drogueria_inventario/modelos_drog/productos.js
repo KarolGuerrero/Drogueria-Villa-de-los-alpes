@@ -8,7 +8,7 @@ const productoSchema = new mongoose.Schema({
   precioVenta: { 
     type: Number, 
     required: true, 
-    min: 0 // Evitar que el precio de venta sea menor al de compra
+    min: 0
   },
   fechaVencimiento: { type: Date, required: true }
 });

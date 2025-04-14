@@ -4,9 +4,15 @@
       <ul>
         <li><router-link to="/facturar">Venta</router-link></li>
         <li><router-link to="/inventario">Inventario</router-link></li>
-        <li><router-link to="/clientes">Clientes</router-link></li>
-        <li><router-link to="/reportes">Reportes</router-link></li>
-        <li><router-link to="/vendedores">Vendedores</router-link></li>
+        <li v-if="userRole !== 'vendedor'">
+          <router-link to="/clientes">Clientes</router-link>
+        </li>
+        <li v-if="userRole !== 'vendedor'">
+          <router-link to="/reportes">Reportes</router-link>
+        </li>
+        <li v-if="userRole !== 'vendedor'">
+          <router-link to="/vendedores">Vendedores</router-link>
+        </li>
       </ul>
       <div class="usuario">
         <button @click="verAlertas">
@@ -48,12 +54,20 @@ export default {
       }
     },
     checkAuthStatus() {
-      this.isAuthenticated = !!localStorage.getItem('user');
-      this.nombreUsuario = localStorage.getItem(this.nombreUsuario) || "Usuario";
+      const token = localStorage.getItem("token");
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split(".")[1]));
+          this.isAuthenticated = true;
+          this.nombreUsuario = payload.id ;
+          this.userRole = payload.rol;
+        } catch (error) {
+          console.error("Token inválido:", error);
+        }
+      }
     },
     logout() {
-      localStorage.removeItem('user');
-      localStorage.removeItem('nombreUsuario');
+      localStorage.removeItem("token");
       this.isAuthenticated = false;
       alert("Sesión cerrada");
       this.$router.replace('/');

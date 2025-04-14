@@ -32,11 +32,10 @@ export default {
           nombreUsuario: this.nombreUsuario,
           contrasena: this.contrasena,
         });
-        alert(response.data.mensaje);
 
-        
-        // Guardar estado de sesión en localStorage
-        localStorage.setItem('user', JSON.stringify(response.data.usuario)); 
+        const { token } = response.data; 
+        localStorage.setItem('token', token);
+        alert(response.data.mensaje);
 
         this.$router.push('/facturar');
 

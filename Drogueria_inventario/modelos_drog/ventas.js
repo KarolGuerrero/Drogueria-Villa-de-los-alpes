@@ -7,10 +7,17 @@ const ventaSchema = new mongoose.Schema({
     enum: ['mostrador', 'cliente'] 
   },
   cliente: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Cliente', 
-    required: function() { return this.tipoVenta === 'cliente'; } 
-  }, // Cliente opcional si es venta por mostrador
+    id: { 
+      type: String, 
+      ref: 'Cliente',
+      required: function() { return this.tipoVenta === 'cliente'; }
+    },
+    nombre: {
+      type: String,
+      required: function() { return this.tipoVenta === 'cliente'; }
+    }
+  }, // Guarda ID y nombre si es venta a cliente
+
   productos: [{
     codigoBarras: { type: String, required: true },
     descripcion: { type: String, required: true },
@@ -24,7 +31,7 @@ const ventaSchema = new mongoose.Schema({
     montoPagado: { type: Number, required: function() { return this.pago.metodo === 'efectivo'; } },
     cambio: { type: Number, default: 0 }
   },
-  observaciones: { type: String }, // Campo opcional para notas en la venta
+  observaciones: { type: String },
   fecha: { type: Date, default: Date.now }
 });
 

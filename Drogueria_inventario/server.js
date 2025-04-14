@@ -3,6 +3,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 
 // Importar modelos
 const Administrador = require('./modelos_drog/admin.js');
@@ -11,8 +12,11 @@ const Ventas = require('./modelos_drog/ventas.js');
 const Productos = require('./modelos_drog/productos.js');
 const Clientes = require('./modelos_drog/clientes.js');
 const { importarExcel, upload } = require('./modelos_drog/importExcel');
-const productos = require('./modelos_drog/productos.js');
 
+
+
+// Clave secreta para JWT
+const JWT_SECRET = 'tu_clave_secreta';
 
 const app = express();
 
@@ -38,8 +42,24 @@ app.use(cors({
   credentials: true // Habilita cookies si es necesario
 }));
 
-// Rutas para la API
+// Middleware para verificar el token JWT
+const autenticarJWT = (req, res, next) => {
+  const token = req.header('Authorization');
+  if (!token) {
+    return res.status(401).json({ error: 'Acceso denegado. Token no proporcionado.' });
+  }
 
+  try {
+    // Verificar el token y obtener la información del usuario
+    const datos = jwt.verify(token, JWT_SECRET);
+    req.usuarioId = datos.id;
+    next();
+  } catch (error) {
+    res.status(403).json({ error: 'Token inválido' });
+  }
+};
+
+// Rutas para las API
 //----------------------------------Administrador----------------------------------------------------------------------------
 
 // 📌 Ruta para obtener todos los vendedores (solo para propósitos de prueba)
@@ -77,8 +97,18 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ error: 'Clave o Usuario incorrecto' });
     }
     
-    // Responder con mensaje de bienvenida y rol
-    res.json({ mensaje: `Bienvenido, ${usuario.nombreUsuario}`, rol });
+    const token1 =  jwt.sign(
+      { id: nombreUsuario, rol: rol }, 
+      JWT_SECRET, // Aquí pones tu clave secreta
+      { expiresIn: '15h' }
+    );
+    
+    res.json({
+      token: token1,
+      mensaje: `Bienvenido, ${usuario.nombreUsuario}`,
+      rol
+    });
+    
 
   } catch (error) {
     res.status(500).json({ error: 'Error en el servidor', detalle: error.message });
@@ -171,9 +201,10 @@ app.post('/api/producto/crear', async (req, res) => {
     if (productoExistente) {
       return res.status(400).json({ error: `El producto "${descripcion}" ya está registrado con este codigo.` });
     }
-
+    const precioCompra_ = Number(req.body.precioCompra);
+    const precioVenta_ = Number(req.body.precioVenta);
     // Validación adicional
-    if (precioVenta < precioCompra) {
+    if (precioVenta_ < precioCompra_) {
       return res.status(400).json({ error: "El precio de venta no puede ser menor al precio de compra." });
     }
 
@@ -530,11 +561,23 @@ app.delete('/api/clientes/eliminar', async (req, res) => {
 app.post('/api/producto/factura', async (req, res) => {
   try {
     // Extraemos los datos de la solicitud
-    const { tipoVenta, cliente, productos, pago } = req.body;
+    let { tipoVenta, cliente, productos, pago } = req.body;
     
     // Validamos que haya productos en la factura
     if (!productos || productos.length === 0) {
       return res.status(400).json({ error: "Debe enviar al menos un producto" });
+    }
+
+    if(tipoVenta === 'cliente'){
+      if (!cliente) {
+        return res.status(400).json({ error: "Debe enviar el ID del cliente" });
+      }
+
+      cliente = await Clientes.findOne({idCliente:cliente});
+
+      if (!cliente) {
+        return res.status(404).json({ error: 'Cliente no encontrado' });
+      }
     }
 
     let total = 0; // Variable para calcular el total de la factura
@@ -543,7 +586,7 @@ app.post('/api/producto/factura', async (req, res) => {
     // Iteramos sobre los productos enviados en la solicitud
     for (const item of productos) {
       // Buscamos el producto en la base de datos usando el código de barras
-      const producto = await productos.findOne({ codigoBarras: item.codigoBarras });
+      const producto = await Productos.findOne({ codigoBarras: item.codigoBarras });
 
       // Si el producto no existe, devolvemos un error
       if (!producto) {
@@ -576,7 +619,7 @@ app.post('/api/producto/factura', async (req, res) => {
       });
 
       // Actualizamos el stock del producto en la base de datos
-      await Productos.updateOne({ codigoBarras: item.codigoBarras }, { $inc: { cantidadStock: -item.cantidad } });
+      //await Productos.updateOne({ codigoBarras: item.codigoBarras }, { $inc: { cantidadStock: -item.cantidad } });
     }
 
     // Validamos que el método de pago sea válido
@@ -591,7 +634,10 @@ app.post('/api/producto/factura', async (req, res) => {
     // Creamos la nueva factura en la base de datos
     const nuevaFactura = new Ventas({
       tipoVenta, // "mostrador" o "cliente"
-      cliente: tipoVenta === 'cliente' ? cliente : null, // Solo se guarda el cliente si es una venta de cliente
+      cliente: tipoVenta === 'cliente' ? {
+        id: cliente.idCliente, // ID del cliente
+        nombre: cliente.nombre // Nombre del cliente
+      } : null, // Solo se guarda el cliente si es una venta de cliente
       productos: productosProcesados, // Lista de productos con detalles
       total, // Total de la factura
       pago: {
@@ -602,8 +648,17 @@ app.post('/api/producto/factura', async (req, res) => {
       fecha: new Date() // Fecha y hora actual
     });
 
+
     // Guardamos la factura en la base de datos
     await nuevaFactura.save();
+
+    // Descontar inventario solo si la factura fue exitosa
+    for (const item of productos) {
+      await Productos.updateOne(
+        { codigoBarras: item.codigoBarras },
+        { $inc: { cantidadStock: -item.cantidad } }
+      );
+    }
 
     // Enviamos la respuesta con la información de la venta
     res.status(201).json({ message: "Factura generada con éxito", total, cambio });
