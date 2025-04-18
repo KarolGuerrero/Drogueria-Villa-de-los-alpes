@@ -1,155 +1,317 @@
 <template>
-  <div class="container">
-    <h1>Gestión de Clientes</h1>
+  <div class="contenedor">
+    <h1 class="titulo">Gestión de Clientes</h1>
 
-    <!-- Crear Cliente -->
-    <section>
+    <!-- Navegación de pestañas -->
+    <div class="tab-buttons">
+      <button 
+        v-for="(tab, index) in tabs" 
+        :key="index" 
+        @click="activeTab = tab.id"
+        :class="{ active: activeTab === tab.id }"
+      >
+        {{ tab.name }}
+      </button>
+    </div>
+
+    <!-- Pestaña: Crear Cliente -->
+    <section class="seccion" v-show="activeTab === 'crear'">
       <h2>Crear Cliente</h2>
       <form @submit.prevent="crearCliente">
-        <input v-model="nuevoCliente.nombre" placeholder="Nombre" />
-        <input v-model="nuevoCliente.numero" placeholder="Número (10 dígitos)" />
-        <button>Crear</button>
-        <p v-if="mensajeCrear">{{ mensajeCrear }}</p>
+        <input type="text" v-model="nuevoCliente.nombre" placeholder="Nombre" required />
+        <input type="text" v-model="nuevoCliente.numero" placeholder="Número" required />
+        <button type="submit" class="boton-principal">Guardar Cliente</button>
       </form>
     </section>
 
-    <!-- Listar Clientes -->
-    <section>
-      <h2>Lista de Clientes</h2>
-      <button @click="obtenerClientes">Refrescar</button>
-      <ul>
-        <li v-for="cliente in clientes" :key="cliente._id">
+    <!-- Pestaña: Buscar Cliente -->
+    <section class="seccion" v-show="activeTab === 'buscar'">
+      <h2>Buscar Cliente</h2>
+      <form @submit.prevent="buscarCliente">
+        <input type="text" v-model="nombreBusqueda" placeholder="Nombre" />
+        <button type="submit" class="boton-principal">Buscar</button>
+      </form>
+      <div v-if="clienteEncontrado" class="resultado">
+        <p><strong>Nombre:</strong> {{ clienteEncontrado.nombre }}</p>
+        <p><strong>Número:</strong> {{ clienteEncontrado.numero }}</p>
+      </div>
+    </section>
+
+    <!-- Pestaña: Actualizar Cliente -->
+    <section class="seccion" v-show="activeTab === 'actualizar'">
+      <h2>Actualizar Cliente</h2>
+      <form @submit.prevent="actualizarCliente">
+        <input type="text" v-model="clienteParaActualizar.idCliente" placeholder="ID Cliente"  />
+        <input type="text" v-model="clienteParaActualizar.nombre" placeholder="nombre"  />
+        <input type="text" v-model="clienteParaActualizar.numero" placeholder="Nuevo Número" />
+        <button type="submit" class="boton-principal">Actualizar Cliente</button>
+      </form>
+    </section>
+
+    <!-- Pestaña: Eliminar Cliente -->
+    <section class="seccion" v-show="activeTab === 'eliminar'">
+      <h2>Eliminar Cliente</h2>
+      <form @submit.prevent="eliminarCliente">
+        <input type="text" v-model="clienteParaEliminar.idCliente" placeholder="ID Cliente" required />
+        <input type="text" v-model="clienteParaEliminar.motivo" placeholder="Motivo" required />
+        <button type="submit" class="boton-principal">Eliminar Cliente</button>
+      </form>
+    </section>
+
+    <!-- Pestaña: Listar Clientes -->
+    <section class="seccion" v-show="activeTab === 'listar'">
+      <h2>Listado de Clientes</h2>
+      <button @click="obtenerTodosClientes" class="boton-secundario">Actualizar Lista</button>
+      <ul class="lista-clientes">
+        <li v-for="cliente in clientes" :key="cliente.idCliente">
           {{ cliente.nombre }} - {{ cliente.numero }}
         </li>
       </ul>
     </section>
-
-    <!-- Buscar Cliente -->
-    <section>
-      <h2>Buscar Cliente</h2>
-      <input v-model="busqueda.nombre" placeholder="Buscar por nombre" />
-      <button @click="buscarCliente">Buscar</button>
-      <div v-if="clienteBuscado">
-        <p>Resultado: {{ clienteBuscado.nombre }} - {{ clienteBuscado.numero }}</p>
-      </div>
-    </section>
-
-    <!-- Editar Cliente -->
-    <section>
-      <h2>Editar Cliente</h2>
-      <input v-model="editar.nombre" placeholder="Nombre del cliente a editar" />
-      <input v-model="editar.nuevoNumero" placeholder="Nuevo número" />
-      <button @click="editarCliente">Actualizar</button>
-      <p v-if="mensajeEditar">{{ mensajeEditar }}</p>
-    </section>
-
-    <!-- Eliminar Cliente -->
-    <section>
-      <h2>Eliminar Cliente</h2>
-      <input v-model="eliminar.idCliente" placeholder="ID del cliente" />
-      <input v-model="eliminar.motivo" placeholder="Motivo de eliminación" />
-      <button @click="eliminarCliente">Eliminar</button>
-      <p v-if="mensajeEliminar">{{ mensajeEliminar }}</p>
-    </section>
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
-import axios from 'axios'
+<script>
+import axios from 'axios';
 
-// Crear cliente
-const nuevoCliente = ref({ nombre: '', numero: '' })
-const mensajeCrear = ref('')
+export default {
+  data() {
+    return {
+      // Sistema de pestañas
+      activeTab: 'crear',
+      tabs: [
+        { id: 'crear', name: 'Crear Cliente' },
+        { id: 'buscar', name: 'Buscar Cliente' },
+        { id: 'actualizar', name: 'Actualizar Cliente' },
+        { id: 'eliminar', name: 'Eliminar Cliente' },
+        { id: 'listar', name: 'Listar Clientes' }
+      ],
+      // Datos para operaciones
+      nuevoCliente: {
+        nombre: '',
+        numero: ''
+      },
+      nombreBusqueda: '',
+      clienteEncontrado: null,
+      clienteParaActualizar: {
+        idCliente: '',
+        nombre: '',
+        numero: ''
+      },
+      clienteParaEliminar: {
+        idCliente: '',
+        motivo: ''
+      },
+      clientes: []
+    };
+  },
+  methods: {
+    async crearCliente() {
+      try {
+        const response = await axios.post('http://localhost:3001/api/clientes/crear', this.nuevoCliente);
+        alert(response.data.message);
+        this.nuevoCliente.nombre = '';
+        this.nuevoCliente.numero = '';
+      } catch (error) {
+        alert(error.response.data.error);
+      }
+    },
+    async buscarCliente() {
+      try {
+        const response = await axios.get('http://localhost:3001/api/clientes/uno', {
+          params: { nombre: this.nombreBusqueda }
+        });
+        this.clienteEncontrado = response.data;
+      } catch (error) {
+        alert(error.response.data.error);
+        this.clienteEncontrado = null;
+      }
+    },
+    async actualizarCliente() {
+      try {
+        // Verificar que se proporcione un ID de cliente y el nuevo número
 
-const crearCliente = async () => {
-  try {
-    const res = await axios.post('http://localhost:3001/api/clientes/crear', nuevoCliente.value)
-    mensajeCrear.value = res.data.message
-    obtenerClientes()
-  } catch (err) {
-    mensajeCrear.value = err.response?.data?.error || 'Error al crear cliente'
+
+        if (!this.clienteParaActualizar.numero) {
+          alert('Debe proporcionar el nuevo número de teléfono.');
+          return;
+        }
+
+        // Crear el objeto con los datos a actualizar: solo idCliente y numero
+        const clienteAActualizar = {
+          idCliente: this.clienteParaActualizar.idCliente,
+          nombre: this.clienteParaActualizar.nombre,
+          numero: this.clienteParaActualizar.numero
+        };
+
+        // Realizar la solicitud de actualización
+        const response = await axios.put('http://localhost:3001/api/clientes/modificar', clienteAActualizar);
+        
+        // Mostrar el mensaje de éxito
+        alert(response.data.mensaje);
+        
+        // Limpiar el formulario de actualización
+        this.clienteParaActualizar = { idCliente: '', nombre: '', numero: '' };
+      } catch (error) {
+        // Manejar posibles errores de la respuesta del servidor
+        if (error.response) {
+          alert(error.response.data.mensaje || error.response.data.error);
+        } else {
+          alert('Error al actualizar el cliente.');
+        }
+      }
+    },
+    async eliminarCliente() {
+      try {
+        const response = await axios.delete('http://localhost:3001/api/clientes/eliminar', {
+          data: this.clienteParaEliminar
+        });
+        alert(response.data.mensaje);
+        this.clienteParaEliminar = { idCliente: '', motivo: '' };
+      } catch (error) {
+        alert(error.response.data.error);
+      }
+    },
+    async obtenerTodosClientes() {
+      try {
+        const response = await axios.get('http://localhost:3001/api/clientes/todos');
+        this.clientes = response.data;
+      } catch (error) {
+        alert(error.response.data.error);
+      }
+    }
+  },
+  mounted() {
+    // Cargar la lista de clientes al iniciar el componente
+    this.obtenerTodosClientes();
   }
-}
-
-// Listar clientes
-const clientes = ref([])
-
-const obtenerClientes = async () => {
-  try {
-    const res = await axios.get('http://localhost:3001/api/clientes/todos')
-    clientes.value = res.data
-  } catch (err) {
-    console.error('Error al obtener clientes')
-  }
-}
-onMounted(obtenerClientes)
-
-// Buscar cliente
-const busqueda = ref({ nombre: ''})
-
-const clienteBuscado = ref(null)
-const buscarCliente = async () => {
-  try {
-    const res = await axios.get('http://localhost:3001/api/clientes/uno', busqueda.value)
-    clienteBuscado.value = res.data
-  } catch (err) {
-    clienteBuscado.value = null
-    alert(err.response?.data?.error || 'Cliente no encontrado')
-  }
-}
-
-// Editar cliente
-const editar = ref({ nombre: '', nuevoNumero: '' })
-const mensajeEditar = ref('')
-
-const editarCliente = async () => {
-  try {
-    const res = await axios.put('http://localhost:3001/api/clientes/modificar', {
-      nombre: editar.value.nombre,
-      numero: editar.value.nuevoNumero
-    })
-    mensajeEditar.value = res.data.mensaje
-    obtenerClientes()
-  } catch (err) {
-    mensajeEditar.value = err.response?.data?.mensaje || 'Error al editar cliente'
-  }
-}
-
-// Eliminar cliente
-const eliminar = ref({ idCliente: '', motivo: '' })
-const mensajeEliminar = ref('')
-
-const eliminarCliente = async () => {
-  try {
-    const res = await axios.delete('http://localhost:3001/api/clientes/eliminar', {
-      data: eliminar.value
-    })
-    mensajeEliminar.value = res.data.mensaje
-    obtenerClientes()
-  } catch (err) {
-    mensajeEliminar.value = err.response?.data?.error || 'Error al eliminar cliente'
-  }
-}
+};
 </script>
 
 <style scoped>
-.container {
-  max-width: 800px;
+.contenedor {
+  max-width: 900px;
   margin: auto;
-  font-family: Arial, sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  padding: 20px;
 }
-section {
-  margin-bottom: 2rem;
-  border-bottom: 1px solid #ccc;
-  padding-bottom: 1rem;
+
+.titulo {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: #1a237e;
 }
+
+/* Estilos para la navegación de pestañas */
+.tab-buttons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 30px;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.tab-buttons button {
+  padding: 12px 20px;
+  background-color: #f0f0f0;
+  color: #333;
+  border: none;
+  border-radius: 8px 8px 0 0;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.tab-buttons button.active {
+  background-color: #1a237e;
+  color: white;
+}
+
+.tab-buttons button:hover:not(.active) {
+  background-color: #e0e0e0;
+}
+
+.seccion {
+  background-color: #f9f9f9;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 input {
-  margin: 0.3rem;
-  padding: 0.4rem;
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  transition: border-color 0.3s;
 }
-button {
-  margin-left: 0.5rem;
-  padding: 0.4rem 0.7rem;
+
+input:focus {
+  border-color: #1a237e;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(26, 35, 126, 0.2);
+}
+
+.boton-principal {
+  width: 100%;
+  padding: 12px;
+  background-color: #1a237e;
+  color: white;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.boton-principal:hover {
+  background-color: #3f51b5;
+}
+
+.boton-secundario {
+  padding: 8px 16px;
+  background-color: #e0e0e0;
+  color: #333;
+  border: none;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.boton-secundario:hover {
+  background-color: #bdbdbd;
+}
+
+.resultado {
+  margin-top: 15px;
+  background-color: #e8eaf6;
+  padding: 15px;
+  border-radius: 6px;
+  border-left: 4px solid #1a237e;
+}
+
+.lista-clientes {
+  list-style-type: none;
+  padding: 0;
+}
+
+.lista-clientes li {
+  padding: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.lista-clientes li:last-child {
+  border-bottom: none;
 }
 </style>
