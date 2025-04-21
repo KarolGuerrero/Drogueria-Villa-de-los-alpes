@@ -21,9 +21,6 @@
           </li>
         </ul>
         <div class="usuario">
-          <button class="alert-btn" @click="verAlertas">
-            <i class="fas fa-bell" style="color: yellow;"></i> Alertas
-          </button>
           <div class="dropdown">
             <button class="user-btn" @click="toggleDropdown">
               <i class="fas fa-user" style="color: purple;"></i>

@@ -62,16 +62,6 @@ const autenticarJWT = (req, res, next) => {
 // Rutas para las API
 //----------------------------------Administrador----------------------------------------------------------------------------
 
-// 📌 Ruta para obtener todos los vendedores (solo para propósitos de prueba)
-app.get('/api/vendedores', async (req, res) => {
-  try {
-    const vendedores = await Vendedor.find();
-    res.json(vendedores);
-  } catch (error) {
-    res.status(500).json({ mensaje: "Error al obtener vendedores", error });
-  }
-});
-
 // Ruta de login unificada para vendedores y administradores
 app.post('/api/login', async (req, res) => {
   const { nombreUsuario, contrasena } = req.body;
@@ -115,6 +105,18 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// 📌 Ruta para obtener todos los vendedores (solo para propósitos de prueba)
+app.get('/api/vendedores', async (req, res) => {
+  try {
+    const vendedores = await Vendedor.find();
+    res.json(vendedores);
+  } catch (error) {
+    res.status(500).json({ mensaje: "Error al obtener vendedores", error });
+  }
+});
+
+
+
 
 // 📌 Ruta para cambiar la contraseña del administrador
 app.put('/api/admin/cambiar-contrasena', async (req, res) => {
@@ -141,6 +143,28 @@ app.put('/api/admin/cambiar-contrasena', async (req, res) => {
   }
 });
 
+// 📌 Ruta para cambiar la contraseña de un vendedor (solo accesible por un administrador)
+app.put('/api/admin/cambiar-contrasena-vendedor', async (req, res) => {
+  try {
+    const { nombreUsuario, contrasena } = req.body;
+
+    const nuevaContrasenaHash = require('crypto').createHash('md5').update(contrasena).digest('hex');
+
+    const vendedorActualizado = await Vendedor.findOneAndUpdate(
+      { nombreUsuario },
+      { contrasena: nuevaContrasenaHash },
+      { new: true }
+    );
+
+    if (!vendedorActualizado) {
+      return res.status(404).json({ mensaje: "Vendedor no encontrado" });
+    }
+
+    res.json({ mensaje: "Contraseña del vendedor actualizada con éxito" });
+  } catch (error) {
+    res.status(500).json({ mensaje: "Error al actualizar la contraseña del vendedor", error });
+  }
+});
 // 📌 Ruta para crear un nuevo vendedor (solo accesible por un administrador)
 app.post('/api/admin/crear-vendedor', async (req, res) => {
   const { nombreUsuario, contrasena } = req.body;
@@ -167,6 +191,7 @@ app.post('/api/admin/crear-vendedor', async (req, res) => {
     res.status(500).json({ mensaje: "Error al crear el vendedor", error });
   }
 });
+
 
 // 📌 Ruta para eliminar un vendedor (solo accesible por un administrador)
 app.delete('/api/admin/eliminar-vendedor', async (req, res) => {
