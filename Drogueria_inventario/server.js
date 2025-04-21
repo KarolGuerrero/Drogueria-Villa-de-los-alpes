@@ -462,7 +462,7 @@ app.get('/api/clientes/todos', async (req, res) => {
 //Obtener un cliente especifico
 app.get('/api/clientes/uno', async (req, res) => {
   try {
-    const { nombre, idCliente } = req.  body; // Recibe los parámetros desde la URL
+    const { nombre, idCliente } = req.query; // Recibe los parámetros desde la URL
 
     if (!nombre && !idCliente) {
       return res.status(400).json({ error: "Debe proporcionar nombre o numero de cliente" });
@@ -500,8 +500,9 @@ app.put('/api/clientes/modificar', async (req, res) => {
     if (nombre)filtro.nombre  = { $regex: nombre, $options: 'i' }; // Búsqueda parcial e insensible a mayúsculas
 
 
-    // Buscar el producto por su código de barras
-    const clienteExistente = await Clientes.findOne({filtro});
+    console.log("Filtro de búsqueda:", filtro);
+
+    const clienteExistente = await Clientes.findOne(filtro);
     
     if (!clienteExistente) {
       return res.status(404).json({ 
@@ -511,16 +512,17 @@ app.put('/api/clientes/modificar', async (req, res) => {
     }
 
     // Actualizar el cliente con la nueva información
+    console.log("Filtro usado para actualización:", filtro);
     const clienteActualizado = await Clientes.findOneAndUpdate(
-      { nombre },
+      filtro,
       req.body,
       { new: true, runValidators: true }
     );
-
+    
     // Responder con el cliente actualizado
     res.status(200).json({
       success: true,
-      mensaje: 'Cloiente actualizado exitosamente',
+      mensaje: 'Cliente actualizado exitosamente',
       producto: clienteActualizado
     });
     
@@ -557,14 +559,13 @@ app.put('/api/clientes/modificar', async (req, res) => {
 // Eliminar un Cliente con motivo
 app.delete('/api/clientes/eliminar', async (req, res) => {
   try {
-    const { idCliente , motivo } = req.body;
-    
+    const { idCliente, motivo } = req.body;
 
     if (!idCliente || motivo.trim() === "") {
       return res.status(400).send({ error: "Debe proporcionar un motivo para la eliminación." });
     }
 
-    const cliente = await Clientes.findOneAndDelete(idCliente);
+    const cliente = await Clientes.findOneAndDelete({ idCliente: idCliente });
 
     if (!cliente) {
       return res.status(404).send({ error: "cliente no encontrado." });
@@ -577,6 +578,7 @@ app.delete('/api/clientes/eliminar', async (req, res) => {
     res.status(500).send({ error: "Error al eliminar el Cliente", detalles: error.message });
   }
 });
+
 //--------------------------------------------------------------------------------------------
 
 
@@ -840,5 +842,4 @@ app.listen(3001, '0.0.0.0', () => {
 });
 
 //------------------------------------------------------------------------------------------
-
 
