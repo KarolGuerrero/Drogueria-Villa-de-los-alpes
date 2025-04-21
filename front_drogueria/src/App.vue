@@ -1,6 +1,8 @@
+#poner icono en la pestaña
+<link rel="icon" type="image/png" href="https://images.vexels.com/media/users/3/208407/isolated/preview/7ad2615dc81ce96bf6618e9a48ee5b3b-icono-de-bolsa-de-farmacia.png" />
 <template>
   <div id="app">
-    <nav v-if="isAuthenticated" class="navbar">
+    <nav v-if="isAuthenticated" class="navbar no-imprimir">
       <div class="nav-content">
         <div class="nav-brand">
           <h1 class="site-title">Drogueria Villa de los Alpes</h1>
@@ -253,4 +255,24 @@ body {
   background-color: rgba(255,255,255,0.2);
   font-weight: 600;
 }
+
+/* Estilos para impresión */
+@media print {
+  /* Ocultar el navbar */
+  .navbar
+  .no-imprimir {
+    display: none !important;
+  }
+
+  /* Mostrar solo la sección de reportes */
+  .imprimir {
+    visibility: visible;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+}
+
+
 </style>

@@ -729,7 +729,7 @@ app.get('/api/estadisticas/inventario', async (req, res) => {
           ventasCount: { $sum: 1 }
       }},
       { $sort: { cantidadVendida: -1 } },
-      { $limit: 10 } // Limitar a los 10 productos más vendidos
+      { $limit: 5 } // Limitar a los 10 productos más vendidos
     ]);
 
     // Obtener niveles de inventario actuales
