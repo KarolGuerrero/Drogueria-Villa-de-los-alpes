@@ -19,12 +19,7 @@
     <div v-if="activeOption === 'crear'" class="bg-white p-4 shadow rounded">
       <h2 class="text-xl font-bold mb-4">Crear Producto</h2>
       <form @submit.prevent="crearProducto">
-        <input 
-          v-model="producto.codigoBarras" 
-          placeholder="Código de Barras" 
-          class="input-field"
-          @keydown.enter.prevent="procesarCodigoBarras('crear')"
-        >
+        <input v-model="producto.codigoBarras" placeholder="Código de Barras" class="input-field">
         <input v-model="producto.descripcion" placeholder="Descripción" class="input-field">
         <input v-model.number="producto.cantidadStock" type="number" placeholder="Cantidad en Stock" class="input-field">
         <input v-model="producto.precioCompra" type="number" placeholder="Precio de Compra" class="input-field">
@@ -67,12 +62,7 @@
     <!-- Buscar Producto -->
     <div v-if="activeOption === 'buscar'" class="bg-white p-4 shadow rounded">
       <h2 class="text-xl font-bold mb-4">Buscar Producto</h2>
-      <input 
-        v-model="codigoBusqueda" 
-        placeholder="Código de Barras" 
-        class="input-field"
-        @keydown.enter.prevent="procesarCodigoBarras('buscar')"
-      >
+      <input v-model="codigoBusqueda" placeholder="Código de Barras" class="input-field">
       <button @click="buscarProducto" class="btn-primary">Buscar</button>
       <div v-if="productoEncontrado">
         <h3 class="mt-4 text-lg font-semibold">Información del Producto</h3>
@@ -86,12 +76,7 @@
     <!-- Modificar Producto -->
     <div v-if="activeOption === 'modificar'" class="bg-white p-4 shadow rounded">
       <h2 class="text-xl font-bold mb-4">Modificar Producto</h2>
-      <input 
-        v-model="codigoModificar" 
-        placeholder="Código de Barras" 
-        class="input-field"
-        @keydown.enter.prevent="procesarCodigoBarras('modificar')"
-      >
+      <input v-model="codigoModificar" placeholder="Código de Barras" class="input-field">
       <button @click="cargarProductoModificar" class="btn-primary">Cargar Datos</button>
       <form v-if="productoModificar" @submit.prevent="modificarProducto">
         <input v-model="productoModificar.descripcion" placeholder="Descripción" class="input-field">
@@ -106,12 +91,7 @@
     <!-- Eliminar Producto -->
     <div v-if="activeOption === 'eliminar'" class="bg-white p-4 shadow rounded">
       <h2 class="text-xl font-bold mb-4">Eliminar Producto</h2>
-      <input 
-        v-model="codigoEliminar" 
-        placeholder="Código de Barras" 
-        class="input-field"
-        @keydown.enter.prevent="procesarCodigoBarras('eliminar')"
-      >
+      <input v-model="codigoEliminar" placeholder="Código de Barras" class="input-field">
       <input v-model="motivo" placeholder="Motivo de eliminación" class="input-field">
       <button @click="eliminarProducto" class="btn-danger">Eliminar</button>
     </div>
@@ -122,12 +102,7 @@
       <!-- Paso 1: Buscar el producto -->
       <div v-if="!productoStock" class="mb-4">
         <div class="flex gap-2">
-          <input 
-            v-model="codigoStock" 
-            placeholder="Código de Barras" 
-            class="input-field flex-grow"
-            @keydown.enter.prevent="procesarCodigoBarras('stock')"
-          >
+          <input v-model="codigoStock" placeholder="Código de Barras" class="input-field flex-grow">
           <button @click="buscarProductoStock" class="btn-primary flex-shrink-0">Buscar</button>
         </div>
       </div>
@@ -191,13 +166,6 @@ export default {
         modificar: { label: "Modificar Producto" },
         eliminar: { label: "Eliminar Producto" },
         stock: { label: "Añadir Stock" }
-      },
-      codigosProcesados: {
-        crear: false,
-        buscar: false,
-        modificar: false,
-        eliminar: false,
-        stock: false
       }
     };
   },
@@ -232,7 +200,7 @@ export default {
     });
   },
   watch: {
-    // Observer cambios en las opciones filtradas y ajuste la opción activa si es necesario
+    // Observe cambios en las opciones filtradas y ajuste la opción activa si es necesario
     filteredOptions: {
       handler(newOptions) {
         // Si la opción activa ya no está disponible, cambiar a la primera opción disponible
@@ -241,108 +209,9 @@ export default {
         }
       },
       deep: true
-    },
-    // NUEVO: Observar cambios en activeOption para limpiar los formularios
-    activeOption(newOption, oldOption) {
-      // Solo limpiar si realmente cambiamos de opción
-      if (newOption !== oldOption) {
-        this.limpiarTodosLosFormularios();
-      }
     }
   },
   methods: {
-    // NUEVO: Método para limpiar todos los formularios
-    limpiarTodosLosFormularios() {
-      // Limpiar formulario de creación
-      this.producto = {
-        codigoBarras: "",
-        descripcion: "",
-        cantidadStock: null,
-        precioCompra: null,
-        precioVenta: null,
-        fechaVencimiento: ""
-      };
-      
-      // Limpiar búsqueda
-      this.codigoBusqueda = "";
-      this.productoEncontrado = null;
-      
-      // Limpiar modificación
-      this.codigoModificar = "";
-      this.productoModificar = null;
-      
-      // Limpiar eliminación
-      this.codigoEliminar = "";
-      this.motivo = "";
-      
-      // Limpiar ajuste de stock
-      this.codigoStock = "";
-      this.productoStock = null;
-      this.cantidadAjuste = 0;
-      
-      // Resetear todos los estados de procesamiento de códigos
-      for (const key in this.codigosProcesados) {
-        this.codigosProcesados[key] = false;
-      }
-    },
-    
-    // Método para procesar el código de barras según la sección activa
-    procesarCodigoBarras(seccion) {
-      // Prevenir procesamiento múltiple del mismo código
-      if (this.codigosProcesados[seccion]) return;
-      
-      this.codigosProcesados[seccion] = true;
-      
-      // Procesar según la sección
-      switch(seccion) {
-        case 'crear':
-          if (this.producto.codigoBarras) {
-            this.producto.codigoBarras = this.producto.codigoBarras.slice(3, -1);
-            // Enfocar el siguiente campo
-            this.$nextTick(() => {
-              document.querySelector('[placeholder="Descripción"]').focus();
-            });
-          }
-          break;
-          
-        case 'buscar':
-          if (this.codigoBusqueda) {
-            this.codigoBusqueda = this.codigoBusqueda.slice(3, -1);
-            this.buscarProducto();
-          }
-          break;
-          
-        case 'modificar':
-          if (this.codigoModificar) {
-            this.codigoModificar = this.codigoModificar.slice(3, -1);
-            this.cargarProductoModificar();
-          }
-          break;
-          
-        case 'eliminar':
-          if (this.codigoEliminar) {
-            this.codigoEliminar = this.codigoEliminar.slice(3, -1);
-            // Enfocar el campo del motivo
-            this.$nextTick(() => {
-              document.querySelector('[placeholder="Motivo de eliminación"]').focus();
-            });
-          }
-          break;
-          
-        case 'stock':
-          if (this.codigoStock) {
-            this.codigoStock = this.codigoStock.slice(3, -1);
-            this.buscarProductoStock();
-          }
-          break;
-      }
-      
-      // Resetear el estado de procesamiento después de un tiempo
-      setTimeout(() => {
-        this.codigosProcesados[seccion] = false;
-      }, 300);
-    },
-    
     obtenerUsuarioActual() {
       try {
         const token = localStorage.getItem("token");
@@ -380,7 +249,6 @@ export default {
         };
       }
     },
-    
     async buscarProductoStock() {
       if (!this.codigoStock) {
         alert("Ingrese un código de Barras");
@@ -392,11 +260,6 @@ export default {
         if (res.data) {
           this.productoStock = res.data;
           this.cantidadAjuste = 0; // Reset cantidad
-          
-          // Enfocar el campo de cantidad a agregar
-          this.$nextTick(() => {
-            document.querySelector('[placeholder="Cantidad a agregar"]').focus();
-          });
         } else {
           alert("Producto no encontrado");
         }
@@ -411,9 +274,6 @@ export default {
       this.productoStock = null;
       this.codigoStock = "";
       this.cantidadAjuste = 0;
-      
-      // Resetear el estado de procesamiento
-      this.codigosProcesados.stock = false;
     },
     
     // Método modificado para ajustar stock
@@ -444,96 +304,34 @@ export default {
         alert("Hubo un error al actualizar el stock");
       }
     },
-    
     async crearProducto() {
       try {
-        // Ya no necesitamos la variable filtro, ya procesamos el código en procesarCodigoBarras
         await axios.post("http://localhost:3001/api/producto/crear", this.producto);
         alert("Producto creado");
         this.limpiarFormulario();
-        // Resetear el estado de procesamiento
-        this.codigosProcesados.crear = false;
       } catch (error) {
         console.error("Error al crear el producto:", error.response?.data || error.message);
         alert("Error: " + (error.response?.data?.error || error.message));
+        this.limpiarFormulario();
       }
     },
-    
     async obtenerProductos() {
-      try {
-        const res = await axios.get("http://localhost:3001/api/producto/todos");
-        this.productos = res.data;
-      } catch (error) {
-        console.error("Error al obtener productos:", error);
-        alert("Error al obtener productos: " + error.message);
-      }
+      const res = await axios.get("http://localhost:3001/api/producto/todos");
+      this.productos = res.data;
     },
-    
     async buscarProducto() {
-      try {
-        const res = await axios.get(`http://localhost:3001/api/producto/uno?codigoBarras=${this.codigoBusqueda}`);
-        if (res.data) {
-          this.productoEncontrado = res.data;
-        } else {
-          alert("Producto no encontrado");
-          this.productoEncontrado = null;
-        }
-        // Resetear el estado de procesamiento
-        this.codigosProcesados.buscar = false;
-      } catch (error) {
-        console.error("Error al buscar el producto:", error);
-        alert("Error al buscar el producto: " + error.message);
-        this.codigosProcesados.buscar = false;
-      }
+      const res = await axios.get(`http://localhost:3001/api/producto/uno?codigoBarras=${this.codigoBusqueda}`);
+      this.productoEncontrado = res.data;
     },
-
     async cargarProductoModificar() {
-      try {
-        const res = await axios.get(`http://localhost:3001/api/producto/uno?codigoBarras=${this.codigoModificar}`);
-        if (res.data) {
-          this.productoModificar = res.data;
-          // Enfocar el primer campo del formulario de modificación
-          this.$nextTick(() => {
-            document.querySelector('[v-model="productoModificar.descripcion"]').focus();
-          });
-        } else {
-          alert("Producto no encontrado");
-          this.productoModificar = null;
-        }
-        // Resetear el estado de procesamiento
-        this.codigosProcesados.modificar = false;
-      } catch (error) {
-        console.error("Error al cargar el producto:", error);
-        alert("Error al cargar el producto: " + error.message);
-        this.codigosProcesados.modificar = false;
-      }
+      const res = await axios.get(`http://localhost:3001/api/producto/uno?codigoBarras=${this.codigoModificar}`);
+      this.productoModificar = res.data;
     },
-    
     async modificarProducto() {
-      try {
-        await axios.put("http://localhost:3001/api/producto/modificar", this.productoModificar);
-        alert("Producto modificado");
-        this.productoModificar = null;
-        this.codigoModificar = "";
-        // Resetear el estado de procesamiento
-        this.codigosProcesados.modificar = false;
-      } catch (error) {
-        console.error("Error al modificar el producto:", error);
-        alert("Error al modificar el producto: " + error.message);
-      }
+      await axios.put("http://localhost:3001/api/producto/modificar", this.productoModificar);
+      alert("Producto modificado");
     },
-    
     async eliminarProducto() {
-      if (!this.codigoEliminar) {
-        alert("Ingrese un código de barras para eliminar");
-        return;
-      }
-      
-      if (!this.motivo || this.motivo.trim() === "") {
-        alert("Debe ingresar un motivo para la eliminación");
-        return;
-      }
-      
       if (confirm("¿Estás seguro de eliminar este producto?")) {
         try {
           const res = await axios.delete("http://localhost:3001/api/producto/eliminar", {
@@ -543,18 +341,14 @@ export default {
           alert(res.data.mensaje); // Asegúrate de que el backend mande un campo `mensaje`
           console.log("Respuesta del backend:", res.data);
           
-          this.codigoEliminar = '';
-          this.motivo = '';
-          // Resetear el estado de procesamiento
-          this.codigosProcesados.eliminar = false;
         } catch (error) {
           console.error("Error al eliminar el producto:", error.response?.data || error.message);
           alert("Error: " + (error.response?.data?.error || error.message));
-          this.codigosProcesados.eliminar = false;
         }
+        this.codigoEliminar = '';
+        this.motivo = '';
       }
     },
-    
     exportarCSV() {
       if (this.productos.length === 0) {
         alert("No hay productos para exportar.");
@@ -598,7 +392,6 @@ export default {
       // Eliminar el enlace después de la descarga
       document.body.removeChild(link);
     },
-    
     limpiarFormulario() {
       this.producto = {
         codigoBarras: "",
@@ -608,10 +401,6 @@ export default {
         precioVenta: null,
         fechaVencimiento: ""
       };
-      // Resetear todos los estados de procesamiento
-      for (const key in this.codigosProcesados) {
-        this.codigosProcesados[key] = false;
-      }
     }
   }
 };
@@ -749,11 +538,6 @@ export default {
   font-size: 14px;
   color: #333;
   border-bottom: 1px solid #f0f0f0;
-}
-
-.inventory-table tbody tr:hover {
-  background-color: #e2e2ff;
-  transition: background-color 0.2s ease-in-out;
 }
 
 .inventory-table tbody tr:hover {

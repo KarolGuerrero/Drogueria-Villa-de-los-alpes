@@ -176,6 +176,7 @@
             </div>
             <div class="ticket-mensaje">
               <p>¡Gracias por su compra!</p>
+              <p>Visite nuestra página web: {{ datosNegocio.web }}</p>
             </div>
           </div>
         </div>
@@ -216,10 +217,11 @@ export default {
         rol: ''
       },
       datosNegocio: {
-        nombre: 'DROGUERÍA Villa de los alpes',
-        direccion: 'Cl 36i Sur #75, Bogotá',
-        telefono: '(601) 456-7890',
+        nombre: 'DROGUERÍA SALUD TOTAL',
+        direccion: 'Calle Principal #123, Ciudad',
+        telefono: '(123) 456-7890',
         nit: '900.123.456-7',
+        web: 'www.saludtotal.com'
       }
     };
   },
@@ -408,7 +410,6 @@ export default {
         }
       }
     },
-
     finalizarVenta() {
       // Cerrar la vista previa del ticket y procesar la venta
       this.mostrarTicket = false;
@@ -435,40 +436,35 @@ export default {
         console.error('Error al buscar cliente:', error);
       }
     },
-async agregarProducto() {
-  if (!this.codigoBarras) return;
-  
-  try {
-    // Filtrar el código de barras de los caracteres adicionales
-    let codigoLimpio = this.codigoBarras.slice(3, -1);
-    
-    // Usar el código limpio para buscar el producto
-    const response = await axios.get('http://localhost:3001/api/producto/uno', {
-      params: { codigoBarras: codigoLimpio }
-    });
-    
-    const producto = response.data;
-    
-    // Verificar si el producto ya existe en la lista
-    const productoExistente = this.productos.find(p => p.codigoBarras === producto.codigoBarras);
-    
-    if (productoExistente) {
-      // Incrementar cantidad si ya existe
-      productoExistente.cantidad += this.cantidad;
-    } else {
-      // Añadir nuevo producto
-      producto.cantidad = this.cantidad;
-      this.productos.push(producto);
-    }
-    
-    this.actualizarTotal();
-    this.codigoBarras = '';
-    this.cantidad = 1;
-  } catch (error) {
-    this.mostrarError(error.response?.data?.error || 'Error al buscar producto');
-    this.codigoBarras = ''; //Borrar los datos de la barra de busqueda
-  }
-},
+    async agregarProducto() {
+      if (!this.codigoBarras) return;
+      
+      try {
+        const response = await axios.get('http://localhost:3001/api/producto/uno', {
+          params: { codigoBarras: this.codigoBarras }
+        });
+        
+        const producto = response.data;
+        
+        // Verificar si el producto ya existe en la lista
+        const productoExistente = this.productos.find(p => p.codigoBarras === producto.codigoBarras);
+        
+        if (productoExistente) {
+          // Incrementar cantidad si ya existe
+          productoExistente.cantidad += this.cantidad;
+        } else {
+          // Añadir nuevo producto
+          producto.cantidad = this.cantidad;
+          this.productos.push(producto);
+        }
+        
+        this.actualizarTotal();
+        this.codigoBarras = '';
+        this.cantidad = 1;
+      } catch (error) {
+        this.mostrarError(error.response?.data?.error || 'Error al buscar producto');
+      }
+    },
     incrementarCantidad() {
       this.cantidad++;
     },
