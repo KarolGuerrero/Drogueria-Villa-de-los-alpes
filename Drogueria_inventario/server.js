@@ -713,8 +713,15 @@ app.get('/api/estadisticas/inventario', async (req, res) => {
     const dateFilter = {};
     if (fechaInicio || fechaFin) {
       dateFilter.fecha = {};
-      if (fechaInicio) dateFilter.fecha.$gte = new Date(fechaInicio);
-      if (fechaFin) dateFilter.fecha.$lte = new Date(fechaFin);
+      if (fechaInicio) {
+        const fechaInicioUTC = new Date(`${fechaInicio}T00:00:00.000Z`);
+        dateFilter.fecha.$gte = fechaInicioUTC;
+      }
+      if (fechaFin) {
+        const fechaFinUTC = new Date(`${fechaFin}T23:59:59.999Z`);
+        dateFilter.fecha.$lte = fechaFinUTC;
+      }      
+      
     }
 
     // Obtener estadísticas de ventas de productos

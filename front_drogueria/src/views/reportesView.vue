@@ -1,32 +1,9 @@
-
 <template>
-  
+
 
   <div class="reportes-container imprimir space-y-8">
 
     <h1 class="text-3xl font-bold text-gray-800 border-b pb-4 custom-font-h1">📊 Reportes y Estadísticas</h1>
-
-
-
-    <!-- Filtros de fecha -->
-    <div class="date-filters no-imprimir">
-      <h2>Filtrar por período</h2>
-      <div class="filters-row">
-        <div>
-          <label>Fecha inicio:</label>
-          <input type="date" v-model="fechaInicio" />
-        </div>
-        <div>
-          <label>Fecha fin:</label>
-          <input type="date" v-model="fechaFin" />
-        </div>
-        <div class="buttons">
-          <button @click="cargarEstadisticas">Aplicar filtros</button>
-          <button @click="exportarPDF" class="export">Exportar PDF</button>
-        </div>
-      </div>
-    </div>
-
 
     <div v-if="cargando" class="text-center p-6">
       <p>Cargando estadísticas...</p>
@@ -121,6 +98,41 @@
           </div>
         </div>
 
+        <!-- Filtros de fecha -->
+        <div class="date-filters imprimir">
+          <h2>Filtrar por período</h2>
+          <div class="filters-row">
+            <div>
+              <label>Fecha inicio:</label>
+              <input type="date" v-model="fechaInicio" />
+            </div>
+            <div>
+              <label>Fecha fin:</label>
+              <input type="date" v-model="fechaFin" />
+            </div>
+            <div class="buttons no-imprimir">
+              <button @click="fechaInicio = ''; fechaFin = ''">Limpiar filtros</button>
+              <button @click="cargarEstadisticas">Aplicar filtros</button>
+              <button @click="exportarPDF" class="export">Exportar PDF</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resumen de Ventas -->
+        <div class="sales-summary mt-6 bg-white p-4 rounded shadow text-center">
+          <div class="stats-summary flex justify-center gap-12 text-lg">
+            <div class="stat-card">
+              <p class="text-gray-600">Cantidad de Ventas</p>
+              <p class="text-2xl font-bold">{{ totalVentas }}</p>
+            </div>
+            <div class="stat-card">
+              <p class="text-gray-600">Total Ingresos</p>
+              <p class="text-2xl font-bold">${{ formatNumber(totalIngresos) }}</p>
+            </div>
+          </div>
+        </div>
+
+
         <!-- Productos más vendidos -->
         <div class="top-products mb-8">
           <h2 class="text-xl font-semibold mb-3">Productos Más Vendidos</h2>
@@ -188,8 +200,6 @@
 </template>
 
 <script>
-import { onMounted, ref, nextTick } from 'vue';
-import { Chart } from 'chart.js';
 
 export default {
   name: 'ReportesView',
@@ -220,7 +230,8 @@ export default {
         if (this.fechaInicio) params.append('fechaInicio', this.fechaInicio);
         if (this.fechaFin) params.append('fechaFin', this.fechaFin);
 
-        const response = await fetch('http://localhost:3001/api/estadisticas/inventario');
+        const response = await fetch(`http://localhost:3001/api/estadisticas/inventario?${params.toString()}`);
+        ;
         if (!response.ok) {
           const errorText = await response.text();
           throw new Error(`Error al cargar las estadísticas: ${response.status} - ${errorText}`);
@@ -228,8 +239,6 @@ export default {
 
         this.estadisticas = await response.json();
 
-        await nextTick(); // Espera a que el DOM se actualice
-        this.generarGrafico(); // Genera el gráfico con los datos
       } catch (error) {
         this.error = error.message;
         console.error(error);
@@ -279,7 +288,18 @@ export default {
     exportarPDF() {
       window.print();
     }
+  },
+  computed: {
+  totalVentas() {
+    if (!this.estadisticas?.ventasPorTipo) return 0;
+    return this.estadisticas.ventasPorTipo.reduce((sum, tipo) => sum + tipo.count, 0);
+  },
+  totalIngresos() {
+    if (!this.estadisticas?.ventasPorTipo) return 0;
+    return this.estadisticas.ventasPorTipo.reduce((sum, tipo) => sum + tipo.total, 0);
   }
+}
+
 };
 </script>
 
@@ -291,11 +311,11 @@ export default {
   border-radius: 8px;
   font-family: sans-serif;
   text-align: center;
-  display:  flex;
+  display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
- 
+
 }
 
 .date-filters h2 {
@@ -373,7 +393,7 @@ export default {
   padding: 1rem;
   border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-  display:  flex;
+  display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
