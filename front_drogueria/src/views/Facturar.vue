@@ -217,9 +217,9 @@ export default {
       },
       datosNegocio: {
         nombre: 'DROGUERÍA Villa de los alpes',
-        direccion: 'Cl 36i Sur #75, Bogotá',
-        telefono: '(601) 456-7890',
-        nit: '900.123.456-7',
+        direccion: 'Cl. 36A Sur # 3A-75',
+        telefono: '(601) 461-4245',
+        nit: '79.526.887-1',
       }
     };
   },
@@ -310,7 +310,7 @@ export default {
         this.procesarVenta(false);
       }
     },
-    imprimirTicket() {
+    imprimirTicket() { 
       // Abrir ventana de impresión para el ticket
       const contenidoTicket = this.$refs.ticketElement.innerHTML;
       const ventanaImpresion = window.open('', '_blank', 'width=600,height=600');
@@ -421,11 +421,12 @@ export default {
       }
       
       try {
-        const response = await axios.get('http://localhost:3001/api/clientes/buscar', {
+        const response = await axios.get('http://localhost:3001/api/clientes/uno', {
           params: { id: this.clienteId }
         });
         
         if (response.data && response.data.nombre) {
+          // Modificado: Usar la propiedad correcta para el nombre del cliente
           this.nombreCliente = response.data.nombre;
         } else {
           this.nombreCliente = '';
@@ -435,40 +436,45 @@ export default {
         console.error('Error al buscar cliente:', error);
       }
     },
-async agregarProducto() {
-  if (!this.codigoBarras) return;
-  
-  try {
-    // Filtrar el código de barras de los caracteres adicionales
-    let codigoLimpio = this.codigoBarras.slice(3, -1);
-    
-    // Usar el código limpio para buscar el producto
-    const response = await axios.get('http://localhost:3001/api/producto/uno', {
-      params: { codigoBarras: codigoLimpio }
-    });
-    
-    const producto = response.data;
-    
-    // Verificar si el producto ya existe en la lista
-    const productoExistente = this.productos.find(p => p.codigoBarras === producto.codigoBarras);
-    
-    if (productoExistente) {
-      // Incrementar cantidad si ya existe
-      productoExistente.cantidad += this.cantidad;
-    } else {
-      // Añadir nuevo producto
-      producto.cantidad = this.cantidad;
-      this.productos.push(producto);
-    }
-    
-    this.actualizarTotal();
-    this.codigoBarras = '';
-    this.cantidad = 1;
-  } catch (error) {
-    this.mostrarError(error.response?.data?.error || 'Error al buscar producto');
-    this.codigoBarras = ''; //Borrar los datos de la barra de busqueda
-  }
-},
+    async agregarProducto() {
+      if (!this.codigoBarras) return;
+      
+      try {
+        // Modificar la lógica de filtrado según el primer carácter
+        let codigoBusqueda = this.codigoBarras;
+        
+        // Solo aplicar el filtro si el primer carácter es un '+'
+        if (this.codigoBarras.startsWith('+')) {
+          codigoBusqueda = this.codigoBarras.slice(3, -1);
+        }
+        
+        // Usar el código (filtrado o no) para buscar el producto
+        const response = await axios.get('http://localhost:3001/api/producto/uno', {
+          params: { codigoBarras: codigoBusqueda }
+        });
+        
+        const producto = response.data;
+        
+        // Verificar si el producto ya existe en la lista
+        const productoExistente = this.productos.find(p => p.codigoBarras === producto.codigoBarras);
+        
+        if (productoExistente) {
+          // Incrementar cantidad si ya existe
+          productoExistente.cantidad += this.cantidad;
+        } else {
+          // Añadir nuevo producto
+          producto.cantidad = this.cantidad;
+          this.productos.push(producto);
+        }
+        
+        this.actualizarTotal();
+        this.codigoBarras = '';
+        this.cantidad = 1;
+      } catch (error) {
+        this.mostrarError(error.response?.data?.error || 'Error al buscar producto');
+        this.codigoBarras = ''; //Borrar los datos de la barra de busqueda
+      }
+    },
     incrementarCantidad() {
       this.cantidad++;
     },

@@ -582,9 +582,9 @@ app.delete('/api/clientes/eliminar', async (req, res) => {
 //--------------------------------------------------------------------------------------------
 
 
-//-----------------------------------------Ventas----------------------------------------------
+//-----------------------------------------Ventas y credito---------------------------------------------
 
-//Factura de Productos y almacenamiento de la venta 
+// Actualizar la ruta de facturación para manejar créditos acumulativos
 app.post('/api/producto/factura', async (req, res) => {
   try {
     // Extraemos los datos de la solicitud
@@ -606,12 +606,11 @@ app.post('/api/producto/factura', async (req, res) => {
         return res.status(404).json({ error: 'Cliente no encontrado' });
       }
 
-        // (cliente.id y cliente.nombre)
+      // (cliente.id y cliente.nombre)
       datosCliente = {
         id: cliente.idCliente,
         nombre: cliente.nombre
       };
-
     }
 
     let total = 0; // Variable para calcular el total de la factura
@@ -650,9 +649,6 @@ app.post('/api/producto/factura', async (req, res) => {
         precioUnitario: producto.precioVenta,
         subtotal
       });
-
-      // Actualizamos el stock del producto en la base de datos
-      //await Productos.updateOne({ codigoBarras: item.codigoBarras }, { $inc: { cantidadStock: -item.cantidad } });
     }
 
     // Validamos que el método de pago sea válido
@@ -663,8 +659,6 @@ app.post('/api/producto/factura', async (req, res) => {
     // Calculamos el cambio si el pago es en efectivo
     let montoPagado = pago.metodo === 'efectivo' ? pago.montoPagado || 0 : 0;
     let cambio = montoPagado - total > 0 ? montoPagado - total : 0;
-
-
 
     // Creamos la nueva factura en la base de datos
     const nuevaFactura = new Ventas({
@@ -680,7 +674,6 @@ app.post('/api/producto/factura', async (req, res) => {
       fecha: new Date() // Fecha y hora actual
     });
 
-
     // Guardamos la factura en la base de datos
     await nuevaFactura.save();
 
@@ -692,6 +685,7 @@ app.post('/api/producto/factura', async (req, res) => {
       );
     }
 
+    // Si es venta a crédito, actualizar el crédito del cliente
     if (tipoVenta === 'cliente' && pago.metodo === 'credito') {
       // Buscar cliente por idCliente
       const clienteEncontrado = await Clientes.findOne({ idCliente: datosCliente.id });
@@ -700,21 +694,38 @@ app.post('/api/producto/factura', async (req, res) => {
         return res.status(404).json({ error: 'Cliente no encontrado para registrar deuda' });
       }
     
-      // Generar número de factura (puedes usar el _id de la venta o un contador)
       const numeroFactura = nuevaFactura._id.toString();
     
       const productosDeuda = productosProcesados.map(p => ({
         nombre: p.descripcion,
         cantidad: p.cantidad,
-        Deuda: p.subtotal
+        deuda: p.subtotal
       }));
-    
-      // Actualizar el campo de crédito
-      clienteEncontrado.credito = {
+      
+      // Inicializar el objeto creditos si no existe
+      if (!clienteEncontrado.creditos) {
+        clienteEncontrado.creditos = {
+          deudaTotal: 0,
+          facturas: []
+        };
+      }
+      
+      // Crear el nuevo registro de factura a crédito
+      const nuevaFacturaCredito = {
         numeroFactura,
-        productos: productosDeuda
+        fechaCompra: new Date(),
+        productos: productosDeuda,
+        montoTotal: total,
+        pagos: [],
+        saldoPendiente: total
       };
-    
+      
+      // Agregar la factura a la lista de facturas del cliente
+      clienteEncontrado.creditos.facturas.push(nuevaFacturaCredito);
+      
+      // Actualizar la deuda total del cliente
+      clienteEncontrado.creditos.deudaTotal += total;
+      
       await clienteEncontrado.save();
     }
 
@@ -724,6 +735,74 @@ app.post('/api/producto/factura', async (req, res) => {
   } catch (error) {
     // Capturamos cualquier error inesperado y devolvemos un mensaje de error
     res.status(500).json({ error: "Error al procesar la factura", detalle: error.message });
+  }
+});
+
+// Nueva ruta para consultar créditos de un cliente
+// Consultar crédito
+app.get('/api/clientes/credito', async (req, res) => {
+  try {
+    const { idCliente } = req.query;
+    
+    if (!idCliente) return res.status(400).json({ error: "ID de cliente requerido" });
+
+    const cliente = await Clientes.findOne({ idCliente: parseInt(idCliente) });
+    
+    if (!cliente) return res.status(404).json({ error: "Cliente no encontrado" });
+
+    const responseData = {
+      nombre: cliente.nombre,
+      deudaTotal: cliente.creditos.deudaTotal || 0,
+      facturas: cliente.creditos.facturas.map(factura => ({
+        ...factura.toObject(),
+        productos: factura.productos.map(prod => ({
+          nombre: prod.nombre,
+          cantidad: prod.cantidad,
+          deuda: prod.deuda
+        }))
+      }))
+    };
+
+    res.json(responseData);
+
+  } catch (error) {
+    res.status(500).json({ error: "Error al consultar créditos", detalle: error.message });
+  }
+});
+
+// Abonar a crédito
+app.post('/api/clientes/credito/abonar', async (req, res) => {
+  try {
+    const { idCliente, numeroFactura, monto } = req.body;
+    
+    const cliente = await Clientes.findOne({ idCliente: parseInt(idCliente) });
+    if (!cliente) return res.status(404).json({ error: "Cliente no encontrado" });
+
+    const factura = cliente.creditos.facturas.find(f => f.numeroFactura === numeroFactura);
+    if (!factura) return res.status(404).json({ error: "Factura no encontrada" });
+
+    if (monto > factura.saldoPendiente) {
+      return res.status(400).json({
+        error: "Monto excede el saldo pendiente",
+        saldoPendiente: factura.saldoPendiente
+      });
+    }
+
+    // Registrar el pago
+    factura.pagos.push({ monto });
+    factura.saldoPendiente -= monto;
+    cliente.creditos.deudaTotal -= monto;
+
+    await cliente.save();
+
+    res.json({
+      mensaje: "Abono registrado exitosamente",
+      nuevoSaldo: factura.saldoPendiente,
+      deudaTotal: cliente.creditos.deudaTotal
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: "Error al procesar el abono", detalle: error.message });
   }
 });
 

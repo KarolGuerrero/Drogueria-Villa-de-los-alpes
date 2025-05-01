@@ -297,7 +297,10 @@ export default {
       switch(seccion) {
         case 'crear':
           if (this.producto.codigoBarras) {
-            this.producto.codigoBarras = this.producto.codigoBarras.slice(3, -1);
+            // Solo aplicar el filtro si comienza con "+"
+            if (this.producto.codigoBarras.startsWith("+")) {
+              this.producto.codigoBarras = this.producto.codigoBarras.slice(3, -1);
+            }
             // Enfocar el siguiente campo
             this.$nextTick(() => {
               document.querySelector('[placeholder="Descripción"]').focus();
@@ -307,21 +310,30 @@ export default {
           
         case 'buscar':
           if (this.codigoBusqueda) {
-            this.codigoBusqueda = this.codigoBusqueda.slice(3, -1);
+            // Solo aplicar el filtro si comienza con "+"
+            if (this.codigoBusqueda.startsWith("+")) {
+              this.codigoBusqueda = this.codigoBusqueda.slice(3, -1);
+            }
             this.buscarProducto();
           }
           break;
           
         case 'modificar':
           if (this.codigoModificar) {
-            this.codigoModificar = this.codigoModificar.slice(3, -1);
+            // Solo aplicar el filtro si comienza con "+"
+            if (this.codigoModificar.startsWith("+")) {
+              this.codigoModificar = this.codigoModificar.slice(3, -1);
+            }
             this.cargarProductoModificar();
           }
           break;
           
         case 'eliminar':
           if (this.codigoEliminar) {
-            this.codigoEliminar = this.codigoEliminar.slice(3, -1);
+            // Solo aplicar el filtro si comienza con "+"
+            if (this.codigoEliminar.startsWith("+")) {
+              this.codigoEliminar = this.codigoEliminar.slice(3, -1);
+            }
             // Enfocar el campo del motivo
             this.$nextTick(() => {
               document.querySelector('[placeholder="Motivo de eliminación"]').focus();
@@ -331,7 +343,10 @@ export default {
           
         case 'stock':
           if (this.codigoStock) {
-            this.codigoStock = this.codigoStock.slice(3, -1);
+            // Solo aplicar el filtro si comienza con "+"
+            if (this.codigoStock.startsWith("+")) {
+              this.codigoStock = this.codigoStock.slice(3, -1);
+            }
             this.buscarProductoStock();
           }
           break;

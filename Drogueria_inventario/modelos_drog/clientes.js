@@ -1,3 +1,4 @@
+
 const mongoose = require('mongoose');
 
 const clienteSchema = new mongoose.Schema({
@@ -6,17 +7,31 @@ const clienteSchema = new mongoose.Schema({
   numero: { type: String, required: true, unique: true },
   fechaRegistro: { type: Date, default: Date.now },
 
-  // Opción de crédito
-  credito: {
-    numeroFactura: { type: String, unique: true, sparse: true }, // Único si existe
-    productos: [
+  // Créditos acumulativos del cliente
+  creditos: {
+    deudaTotal: { type: Number, default: 0 }, // Deuda acumulada total
+    facturas: [
       {
-        nombre: { type: String, required: true },
-        cantidad: { type: Number, required: true, min: 1 },
-        Deuda: { type: Number, required: true, min: 0 },
-      },
-    ],
-  },
+        numeroFactura: { type: String, required: true },
+        fechaCompra: { type: Date, default: Date.now },
+        productos: [
+          {
+            nombre: { type: String, required: true },
+            cantidad: { type: Number, required: true, min: 1 },
+            deuda: { type: Number, required: true, min: 0 },
+          }
+        ],
+        montoTotal: { type: Number, required: true, min: 0 },
+        pagos: [
+          {
+            fecha: { type: Date, default: Date.now },
+            monto: { type: Number, required: true, min: 0 },
+          }
+        ],
+        saldoPendiente: { type: Number, required: true, min: 0 }, // Saldo pendiente de esta factura
+      }
+    ]
+  }
 });
 
 // Esquema para almacenar el contador
