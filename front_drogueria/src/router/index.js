@@ -1,70 +1,70 @@
-import Vue from 'vue'
-import VueRouter from 'vue-router'
-import HomeView from '../views/HomeView.vue'
+import Vue from 'vue';
+import VueRouter from 'vue-router';
+import HomeView from '../views/HomeView.vue';
 
-
-Vue.use(VueRouter)
+Vue.use(VueRouter);
 
 const routes = [
   {
     path: '/',
     name: 'home',
-    component: HomeView
+    component: HomeView,
   },
   {
     path: '/facturar',
     name: 'facturar',
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
     component: function () {
-      return import(/* webpackChunkName: "about" */ '../views/Facturar.vue')
-    }
+      return import(/* webpackChunkName: "about" */ '../views/Facturar.vue');
+    },
+    meta: { requiresAuth: true }, // Protegida
   },
   {
     path: '/inventario',
     name: 'inventario',
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
     component: function () {
-      return import(/* webpackChunkName: "about" */ '../views/InventarioView.vue')
-    }
+      return import(/* webpackChunkName: "about" */ '../views/InventarioView.vue');
+    },
+    meta: { requiresAuth: true }, // Protegida
   },
   {
     path: '/clientes',
     name: 'clientes',
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
     component: function () {
-      return import(/* webpackChunkName: "about" */ '../views/ClientesView.vue')
-    }
+      return import(/* webpackChunkName: "about" */ '../views/ClientesView.vue');
+    },
+    meta: { requiresAuth: true }, // Protegida
   },
   {
     path: '/reportes',
     name: 'reportes',
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
     component: function () {
-      return import(/* webpackChunkName: "about" */ '../views/reportesView.vue')
-    }
+      return import(/* webpackChunkName: "about" */ '../views/reportesView.vue');
+    },
+    meta: { requiresAuth: true }, // Protegida
   },
   {
     path: '/vendedores',
     name: 'vendedores',
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
     component: function () {
-      return import(/* webpackChunkName: "about" */ '../views/manejo_vendedorView.vue')
-    }
-  }
-]
+      return import(/* webpackChunkName: "about" */ '../views/manejo_vendedorView.vue');
+    },
+    meta: { requiresAuth: true }, // Protegida
+  },
+];
 
 const router = new VueRouter({
-  routes
-})
+  routes,
+});
 
-export default router
+// Verificar autenticación antes de cada navegación
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('token'); // Obtener el token del almacenamiento local
+  if (to.meta.requiresAuth && !token) {
+    alert('Debes iniciar sesión para acceder a esta página.');
+    next('/'); // Redirigir al home si no está autenticado
+  } else {
+    next(); // Continuar con la navegación
+  }
+});
+
+export default router;
