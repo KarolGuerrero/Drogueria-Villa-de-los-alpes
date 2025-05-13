@@ -578,7 +578,7 @@ export default {
   border-radius: 5px;
 }
 .buscador button {
-  background-color: #1e90ff;
+  background-color: #1a237e;
   color: white;
   border: none;
   border-radius: 5px;
@@ -602,7 +602,7 @@ export default {
   text-align: left;
 }
 .tabla-productos th {
-  background-color: #333;
+  background-color: #1a237e;
   color: white;
 }
 
@@ -621,10 +621,10 @@ export default {
 .total-container p {
   font-size: 1.5rem;
   font-weight: bold;
-  color: #1e90ff;
+  color: #1a237e;
 }
 .botones-cobro button {
-  background-color: #333;
+  background-color: #1a237e;
   color: white;
   border: none;
   border-radius: 5px;
@@ -633,7 +633,7 @@ export default {
   margin: 10px;
 }
 .botones-cobro button:hover {
-  background-color: #1e90ff;
+  background-color: #0056b3;
 }
 
 /* Nuevos estilos para elementos añadidos */
@@ -698,7 +698,7 @@ export default {
   border-radius: 4px;
 }
 .btn-confirmar {
-  background-color: #1e90ff;
+  background-color: #1a237e;
   color: white;
 }
 .btn-confirmar:hover {
@@ -824,6 +824,6 @@ export default {
   text-align: right;
   font-size: 14px;
   color: #333;
-  border-left: 4px solid #1e90ff;
+  border-left: 4px solid #1a237e;
 }
 </style>

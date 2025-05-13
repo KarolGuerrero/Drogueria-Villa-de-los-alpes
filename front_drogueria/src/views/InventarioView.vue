@@ -1,124 +1,126 @@
 <template>
-  <div class="p-6 max-w-4xl mx-auto">
-    <h1 class="text-2xl font-bold mb-4">Gestión de Inventario</h1>
+  <div class="contenedor">
+    <h1 class="titulo">Gestión de Inventario</h1>
 
-    <!-- Botones de navegación -->
-    <div class="button-container">
+    <!-- Navegación de pestañas -->
+    <div class="tab-buttons">
       <button 
-        v-for="(option, key) in filteredOptions" 
-        :key="key" 
-        @click="activeOption = key"
-        class="nav-button"
-        :class="activeOption === key ? 'active' : ''"
+        v-for="(tab, index) in filteredTabs" 
+        :key="index" 
+        @click="activeTab = tab.id"
+        :class="{ active: activeTab === tab.id }"
       >
-        {{ option.label }}
+        {{ tab.name }}
       </button>
     </div>
 
-    <!-- Formulario para Crear Producto -->
-    <div v-if="activeOption === 'crear'" class="bg-white p-4 shadow rounded">
-      <h2 class="text-xl font-bold mb-4">Crear Producto</h2>
-      <form @submit.prevent="crearProducto">
-        <input 
-          v-model="producto.codigoBarras" 
-          placeholder="Código de Barras" 
-          class="input-field"
-          @keydown.enter.prevent="procesarCodigoBarras('crear')"
-        >
-        <input v-model="producto.descripcion" placeholder="Descripción" class="input-field">
-        <input v-model.number="producto.cantidadStock" type="number" placeholder="Cantidad en Stock" class="input-field">
-        <input v-model="producto.precioCompra" type="number" placeholder="Precio de Compra" class="input-field">
-        <input v-model="producto.precioVenta" type="number" placeholder="Precio de Venta" class="input-field">
-        <input v-model="producto.fechaVencimiento" type="date" class="input-field">
-        <button type="submit" class="btn-primary">Guardar Producto</button>
-      </form>
-    </div>
-
-    <!-- Reporte de Inventario -->
-    <div v-if="activeOption === 'reporte'" class="bg-white p-4 shadow rounded">
-      <h2 class="text-xl font-bold mb-4">Reporte de Inventario</h2>
-      <button @click="obtenerProductos" class="btn-primary mb-4">Cargar Productos</button>
-      <button @click="exportarCSV" class="btn-secondary mb-4">Exportar CSV</button>
-      <table class="inventory-table">
-        <thead>
-          <tr class="bg-gray-200">
-            <th class="border px-4 py-2">Código</th>
-            <th class="border px-4 py-2">Descripción</th>
-            <th class="border px-4 py-2">Stock</th>
-            <th class="border px-4 py-2">Precio compra</th>
-            <th class="border px-4 py-2">Precio Venta</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="p in productos" :key="p.codigoBarras">
-            <td class="border px-4 py-2">{{ p.codigoBarras }}</td>
-            <td class="border px-4 py-2">{{ p.descripcion }}</td>
-            <td class="border px-4 py-2">{{ p.cantidadStock }}</td>
-            <td class="border px-4 py-2">{{ p.precioCompra }}</td>
-            <td class="border px-4 py-2">{{ p.precioVenta }}</td>
-          </tr>
-            <tr v-if="productos.length === 0">
-              <td colspan="5" class="no-data">No hay productos para mostrar.</td>
+    <!-- Pestaña: Listar Productos -->
+    <section class="seccion" v-show="activeTab === 'listar'">
+      <h2>Listado de Productos</h2>
+      <div class="botones-actualizacion">
+        <button @click="obtenerProductos" class="boton-secundario">Actualizar Lista</button>
+        <button @click="exportarCSV" class="boton-principal">Exportar Inventario</button>
+      </div>
+      <div class="tabla-container">
+        <table class="tabla-clientes">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Descripción</th>
+              <th>Stock</th>
+              <th>Precio Compra</th>
+              <th>Precio Venta</th>
             </tr>
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            <tr v-for="producto in productos" :key="producto.codigoBarras">
+              <td>{{ producto.codigoBarras }}</td>
+              <td>{{ producto.descripcion }}</td>
+              <td>{{ producto.cantidadStock }}</td>
+              <td>{{ producto.precioCompra }}</td>
+              <td>{{ producto.precioVenta }}</td>
+            </tr>
+            <tr v-if="productos.length === 0">
+              <td colspan="5" class="sin-datos">No hay productos registrados</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-    <!-- Buscar Producto -->
-    <div v-if="activeOption === 'buscar'" class="bg-white p-4 shadow rounded">
-      <h2 class="text-xl font-bold mb-4">Buscar Producto</h2>
-      <input 
-        v-model="codigoBusqueda" 
-        placeholder="Código de Barras" 
-        class="input-field"
-        @keydown.enter.prevent="procesarCodigoBarras('buscar')"
-      >
-      <button @click="buscarProducto" class="btn-primary">Buscar</button>
-      <div v-if="productoEncontrado">
-        <h3 class="mt-4 text-lg font-semibold">Información del Producto</h3>
+    <!-- Pestaña: Buscar Producto -->
+    <section class="seccion" v-show="activeTab === 'buscar'">
+      <h2>Buscar Producto</h2>
+      <form @submit.prevent="buscarProducto">
+        <input v-model="codigoBusqueda" placeholder="Código de Barras" class="input-field" required>
+        <button type="submit" class="boton-principal">Buscar</button>
+      </form>
+      <div v-if="productoEncontrado" class="resultado">
+        <p><strong>Código:</strong> {{ productoEncontrado.codigoBarras }}</p>
         <p><strong>Descripción:</strong> {{ productoEncontrado.descripcion }}</p>
         <p><strong>Stock:</strong> {{ productoEncontrado.cantidadStock }}</p>
         <p><strong>Precio Compra:</strong> {{ productoEncontrado.precioCompra }}</p>
         <p><strong>Precio Venta:</strong> {{ productoEncontrado.precioVenta }}</p>
       </div>
-    </div>
+    </section>
 
-    <!-- Modificar Producto -->
-    <div v-if="activeOption === 'modificar'" class="bg-white p-4 shadow rounded">
-      <h2 class="text-xl font-bold mb-4">Modificar Producto</h2>
-      <input 
-        v-model="codigoModificar" 
-        placeholder="Código de Barras" 
-        class="input-field"
-        @keydown.enter.prevent="procesarCodigoBarras('modificar')"
-      >
-      <button @click="cargarProductoModificar" class="btn-primary">Cargar Datos</button>
-      <form v-if="productoModificar" @submit.prevent="modificarProducto">
-        <input v-model="productoModificar.descripcion" placeholder="Descripción" class="input-field">
-        <input v-model.number="productoModificar.cantidadStock" type="number" placeholder="Stock" class="input-field">
-        <input v-model.number="productoModificar.precioCompra" type="number" placeholder="Precio Compra" class="input-field">
-        <input v-model.number="productoModificar.precioVenta" type="number" placeholder="Precio Venta" class="input-field">
-        <input v-model="productoModificar.fechaVencimiento" type="date" placeholder="Fecha de vencimiento" class="input-field">
-        <button type="submit" class="btn-primary">Guardar Cambios</button>
+    <!-- Pestaña: Crear Producto -->
+    <section class="seccion" v-show="activeTab === 'crear'">
+      <h2>Crear Producto</h2>
+      <form @submit.prevent="crearProducto">
+        <input v-model="producto.codigoBarras" placeholder="Código de Barras" class="input-field" required>
+        <input v-model="producto.descripcion" placeholder="Descripción" class="input-field" required>
+        <input v-model.number="producto.cantidadStock" type="number" placeholder="Cantidad en Stock" class="input-field" required>
+        <input v-model.number="producto.precioCompra" type="number" placeholder="Precio de Compra" class="input-field" required>
+        <input v-model.number="producto.precioVenta" type="number" placeholder="Precio de Venta" class="input-field" required>
+        <input v-model="producto.fechaVencimiento" type="date" class="input-field" required>
+        <button type="submit" class="boton-principal">Guardar Producto</button>
       </form>
-    </div>
+    </section>
 
-    <!-- Eliminar Producto -->
-    <div v-if="activeOption === 'eliminar'" class="bg-white p-4 shadow rounded">
-      <h2 class="text-xl font-bold mb-4">Eliminar Producto</h2>
-      <input 
-        v-model="codigoEliminar" 
-        placeholder="Código de Barras" 
-        class="input-field"
-        @keydown.enter.prevent="procesarCodigoBarras('eliminar')"
-      >
-      <input v-model="motivo" placeholder="Motivo de eliminación" class="input-field">
-      <button @click="eliminarProducto" class="btn-danger">Eliminar</button>
-    </div>
+    <!-- Pestaña: Modificar Producto -->
+    <section class="seccion" v-show="activeTab === 'modificar'">
+      <h2>Modificar Producto</h2>
+      <form @submit.prevent="cargarProductoModificar" v-if="!productoModificar">
+        <input v-model="codigoModificar" placeholder="Código de Barras" class="input-field" required>
+        <button type="submit" class="boton-principal">Cargar Datos</button>
+      </form>
+      <form v-if="productoModificar" @submit.prevent="modificarProducto">
+        <label for="descripcion">Descripción:</label>
+        <input id="descripcion" v-model="productoModificar.descripcion" placeholder="Descripción" class="input-field" required>
 
-    <!-- Añadir Stock -->
-    <div v-if="activeOption === 'stock'" class="bg-white p-4 shadow rounded">
-      <h2 class="text-xl font-bold mb-4">Añadir Stock</h2>
+        <label for="cantidadStock">Stock:</label>
+        <input id="cantidadStock" v-model.number="productoModificar.cantidadStock" type="number" placeholder="Stock" class="input-field" required>
+
+        <label for="precioCompra">Precio Compra:</label>
+        <input id="precioCompra" v-model.number="productoModificar.precioCompra" type="number" placeholder="Precio Compra" class="input-field" required>
+
+        <label for="precioVenta">Precio Venta:</label>
+        <input id="precioVenta" v-model.number="productoModificar.precioVenta" type="number" placeholder="Precio Venta" class="input-field" required>
+
+        <label for="fechaVencimiento">Fecha de Vencimiento:</label>
+        <input id="fechaVencimiento" v-model="productoModificar.fechaVencimiento" type="date" class="input-field" required>
+
+        <div class="botones-actualizacion">
+          <button type="button" @click="cancelarAjuste" class="boton-secundario">Cancelar</button>
+          <button type="submit" class="boton-principal">Guardar Cambios</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Pestaña: Eliminar Producto -->
+    <section class="seccion" v-show="activeTab === 'eliminar'">
+      <h2>Eliminar Producto</h2>
+      <form @submit.prevent="eliminarProducto">
+        <input v-model="codigoEliminar" placeholder="Código de Barras" class="input-field" required>
+        <input v-model="motivo" placeholder="Motivo de eliminación" class="input-field" required>
+        <button type="submit" class="boton-principal">Eliminar</button>
+      </form>
+    </section>
+
+    <!-- Pestaña: Actualizar Stock -->
+    <section class="seccion" v-show="activeTab === 'stock'">
+      <h2>Añadir Stock</h2>
       <!-- Paso 1: Buscar el producto -->
       <div v-if="!productoStock" class="mb-4">
         <div class="flex gap-2">
@@ -128,14 +130,14 @@
             class="input-field flex-grow"
             @keydown.enter.prevent="procesarCodigoBarras('stock')"
           >
-          <button @click="buscarProductoStock" class="btn-primary flex-shrink-0">Buscar</button>
+          <button @click="buscarProductoStock" class="boton-principal flex-shrink-0">Buscar</button>
         </div>
       </div>
       
       <!-- Paso 2: Mostrar información del producto y añadir stock -->
       <div v-if="productoStock" class="mt-4">
         <h3 class="font-semibold mb-2">Información del Producto</h3>
-        <div class="bg-gray-100 p-3 rounded mb-4">
+        <div class="resultado">
           <p><strong>Código:</strong> {{ productoStock.codigoBarras }}</p>
           <p><strong>Descripción:</strong> {{ productoStock.descripcion }}</p>
           <p><strong>Stock Actual:</strong> {{ productoStock.cantidadStock }}</p>
@@ -145,12 +147,12 @@
         
         <h3 class="font-semibold mb-2">Ajustar Stock</h3>
         <input v-model.number="cantidadAjuste" type="number" placeholder="Cantidad a agregar" class="input-field">
-        <div class="flex gap-2 mt-2">
-          <button @click="ajustarStock" class="btn-primary">Añadir al Stock</button>
-          <button @click="cancelarAjuste" class="btn-secondary">Cancelar</button>
+        <div class="botones-actualizacion">
+          <button @click="ajustarStock" class="boton-principal">Añadir al Stock</button>
+          <button @click="cancelarAjuste" class="boton-secundario">Cancelar</button>
         </div>
       </div>
-    </div>
+    </section>
   </div>
 </template>
 
@@ -160,7 +162,15 @@ import axios from "axios";
 export default {
   data() {
     return {
-      activeOption: null,
+      activeTab: 'crear',
+      tabs: [
+        { id: 'listar', name: 'Listar Productos' },
+        { id: 'buscar', name: 'Buscar Producto' },
+        { id: 'crear', name: 'Crear Producto' },
+        { id: 'modificar', name: 'Modificar Producto' },
+        { id: 'eliminar', name: 'Eliminar Producto' },
+        { id: 'stock', name: 'Actualizar Stock' }
+      ],
       cantidadAjuste: 0,
       producto: {
         codigoBarras: "",
@@ -203,23 +213,30 @@ export default {
   },
   computed: {
     // Filtra las opciones según el rol del usuario
-    filteredOptions() {
-      // Si el usuario es vendedor, excluir modificar, reporte y eliminar
-      if (this.usuarioActual.rol === "vendedor") {
-        const filteredOpts = { ...this.options };
-        delete filteredOpts.modificar;
-        delete filteredOpts.reporte;
-        delete filteredOpts.eliminar;
-        return filteredOpts;
+      filteredOptions() {
+        // Si el usuario es vendedor, excluir modificar, reporte y eliminar
+        if (this.usuarioActual.rol === "vendedor") {
+          const filteredOpts = { ...this.options };
+          delete filteredOpts.modificar;
+          delete filteredOpts.reporte;
+          delete filteredOpts.eliminar;
+          return filteredOpts;
+        }
+        // Para todos los demás roles, mostrar todas las opciones
+        return this.options;
+      },
+      // Establece la opción activa por defecto basada en las opciones disponibles
+      defaultActiveOption() {
+        return Object.keys(this.filteredOptions)[0] || null;
+      },
+      filteredTabs() {
+        // Exclude 'modificar' and 'eliminar' tabs if the user is a 'vendedor'
+        if (this.usuarioActual.rol === "vendedor") {
+          return this.tabs.filter(tab => tab.id !== 'modificar' && tab.id !== 'eliminar');
+        }
+        return this.tabs;
       }
-      // Para todos los demás roles, mostrar todas las opciones
-      return this.options;
     },
-    // Establece la opción activa por defecto basada en las opciones disponibles
-    defaultActiveOption() {
-      return Object.keys(this.filteredOptions)[0] || null;
-    }
-  },
   created() {
     // Obtener información del usuario actual al cargar el componente
     this.obtenerUsuarioActual();
@@ -633,104 +650,84 @@ export default {
 </script>
 
 <style>
-/* Campos de entrada */
+@import '../assets/global-styles.css';
+
+.titulo {
+  font-size: 2rem;
+  color: #1a237e;
+  margin-bottom: 20px;
+}
+
+.contenedor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  max-width: 900px;
+  margin: auto;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  padding: 20px;
+}
+
+/* Ajustes específicos para InventarioView */
 .input-field {
   display: block;
   width: 100%;
-  padding: 10px;
-  margin-bottom: 10px;
+  padding: 12px;
+  margin-bottom: 15px;
+  border-radius: 6px;
   border: 1px solid #ccc;
-  border-radius: 5px;
+  font-size: 1rem;
+  transition: border-color 0.3s;
 }
 
-/* Contenedor de botones de navegación */
-.button-container {
+.input-field:focus {
+  border-color: #1a237e;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(26, 35, 126, 0.2);
+}
+
+.tab-buttons {
   display: flex;
-  width: 100%;
-  margin-bottom: 1.5rem;
-  gap: 0.5rem;
+  gap: 8px;
+  margin-bottom: 30px;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 10px;
+  flex-wrap: wrap;
 }
 
-/* Botones de navegación */
-.nav-button {
-  flex: 1;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  color: white;
-  background-color: #1E2A78;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  transition: background-color 0.2s ease-in-out;
+.tab-buttons button {
+  padding: 12px 20px;
+  background-color: #f0f0f0;
+  color: #333;
   border: none;
+  border-radius: 8px 8px 0 0;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-.nav-button:hover {
-  background-color: #2563eb;
-}
-
-.nav-button.active {
-  background-color: #1d4ed8;
-}
-
-/* Tarjetas */
-.card {
-  background-color: white;
-  border-radius: 1rem;
-  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
-  padding: 2rem;
-  max-width: 400px;
-  margin: 1rem auto;
-}
-
-/* Botón primario */
-.btn-primary {
-  background-color: #202A96;
+.tab-buttons button.active {
+  background-color: #1a237e;
   color: white;
-  font-weight: bold;
-  padding: 0.6rem 1.2rem;
-  border: none;
-  border-radius: 0.75rem;
-  cursor: pointer;
-  transition: background-color 0.2s ease-in-out;
+}
+
+.tab-buttons button:hover:not(.active) {
+  background-color: #e0e0e0;
+}
+
+.seccion {
+  background-color: #f9f9f9;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  animation: fadeIn 0.3s ease;
   width: 100%;
 }
 
-.btn-primary:hover {
-  background-color: #1B237F;
-}
-
-/* Botón secundario */
-.btn-secondary {
-  background-color: #6366f1;
-  color: white;
-  font-weight: bold;
-  padding: 0.6rem 1.2rem;
-  border: none;
-  border-radius: 0.75rem;
-  cursor: pointer;
-  transition: background-color 0.2s ease-in-out;
-  width: 100%;
-}
-
-.btn-secondary:hover {
-  background-color: #4f46e5;
-}
-
-/* Botón de peligro */
-.btn-danger {
-  background-color: #dc2626;
-  color: white;
-  font-weight: bold;
-  padding: 0.6rem 1.2rem;
-  border: none;
-  border-radius: 0.75rem;
-  cursor: pointer;
-  transition: background-color 0.2s ease-in-out;
-  width: 100%;
-}
-
-.btn-danger:hover {
-  background-color: #b91c1c;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>
 

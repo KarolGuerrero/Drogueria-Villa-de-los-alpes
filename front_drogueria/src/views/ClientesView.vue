@@ -315,56 +315,6 @@ export default {
       facturaSeleccionada: null
     };
   },
-  computed: {
-    // Filtra las opciones según el rol del usuario
-    filteredTabs() {
-      // Si el usuario es vendedor, excluir modificar, reporte y eliminar
-      if (this.usuarioActual.rol === "vendedor") {
-        return this.tabs.filter(tab => 
-          !['actualizar', 'credito', 'eliminar', 'listar'].includes(tab.id)
-        );
-      }
-      // Para todos los demás roles, mostrar todas las opciones
-      return this.tabs;
-    },
-    // Establece la opción activa por defecto basada en las opciones disponibles
-    defaultActiveTab() {
-      return this.filteredTabs.length > 0 ? this.filteredTabs[0].id : null;
-    }
-  },
-  created() {
-    // Obtener información del usuario actual al cargar el componente
-    this.obtenerUsuarioActual();
-    
-    // Establecer la opción activa por defecto después de obtener el usuario
-    this.$nextTick(() => {
-      // Comprobar si la pestaña activa sigue siendo válida para el rol del usuario
-      const tabExists = this.filteredTabs.some(tab => tab.id === this.activeTab);
-      if (!tabExists) {
-        this.activeTab = this.defaultActiveTab;
-      }
-    });
-  },
-  watch: {
-    // Observar cambios en las pestañas filtradas y ajustar la pestaña activa si es necesario
-    filteredTabs: {
-      handler(newTabs) {
-        // Si la pestaña activa ya no está disponible, cambiar a la primera pestaña disponible
-        const tabExists = newTabs.some(tab => tab.id === this.activeTab);
-        if (!tabExists) {
-          this.activeTab = this.defaultActiveTab;
-        }
-      },
-      deep: true
-    },
-    // Observar cambios en activeTab para limpiar los formularios
-    activeTab(newTab, oldTab) {
-      // Solo limpiar si realmente cambiamos de pestaña
-      if (newTab !== oldTab) {
-        this.limpiarTodosLosFormularios();
-      }
-    }
-  },
   methods: {
     // Método para obtener el usuario actual (debe implementarse según tu sistema de autenticación)
     obtenerUsuarioActual() {
