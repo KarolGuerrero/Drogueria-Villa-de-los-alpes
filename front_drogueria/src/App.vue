@@ -10,7 +10,7 @@
         <ul class="nav-links">
           <li><router-link to="/facturar">Venta</router-link></li>
           <li><router-link to="/inventario">Inventario</router-link></li>
-          <li v-if="userRole !== 'vendedor'">
+          <li>
             <router-link to="/clientes">Clientes</router-link>
           </li>
           <li v-if="userRole !== 'vendedor'">

@@ -300,6 +300,11 @@ export default {
       creditoConsulta: {
         idCliente: ''
       },
+      usuarioActual: {
+        id: null,
+        nombre: "",
+        rol: ""
+      },
       infoCredito: null,
       abonoCredito: {
         idCliente: '',
@@ -310,7 +315,116 @@ export default {
       facturaSeleccionada: null
     };
   },
+  computed: {
+    // Filtra las opciones según el rol del usuario
+    filteredTabs() {
+      // Si el usuario es vendedor, excluir modificar, reporte y eliminar
+      if (this.usuarioActual.rol === "vendedor") {
+        return this.tabs.filter(tab => 
+          !['actualizar', 'credito', 'eliminar', 'listar'].includes(tab.id)
+        );
+      }
+      // Para todos los demás roles, mostrar todas las opciones
+      return this.tabs;
+    },
+    // Establece la opción activa por defecto basada en las opciones disponibles
+    defaultActiveTab() {
+      return this.filteredTabs.length > 0 ? this.filteredTabs[0].id : null;
+    }
+  },
+  created() {
+    // Obtener información del usuario actual al cargar el componente
+    this.obtenerUsuarioActual();
+    
+    // Establecer la opción activa por defecto después de obtener el usuario
+    this.$nextTick(() => {
+      // Comprobar si la pestaña activa sigue siendo válida para el rol del usuario
+      const tabExists = this.filteredTabs.some(tab => tab.id === this.activeTab);
+      if (!tabExists) {
+        this.activeTab = this.defaultActiveTab;
+      }
+    });
+  },
+  watch: {
+    // Observar cambios en las pestañas filtradas y ajustar la pestaña activa si es necesario
+    filteredTabs: {
+      handler(newTabs) {
+        // Si la pestaña activa ya no está disponible, cambiar a la primera pestaña disponible
+        const tabExists = newTabs.some(tab => tab.id === this.activeTab);
+        if (!tabExists) {
+          this.activeTab = this.defaultActiveTab;
+        }
+      },
+      deep: true
+    },
+    // Observar cambios en activeTab para limpiar los formularios
+    activeTab(newTab, oldTab) {
+      // Solo limpiar si realmente cambiamos de pestaña
+      if (newTab !== oldTab) {
+        this.limpiarTodosLosFormularios();
+      }
+    }
+  },
   methods: {
+    // Método para obtener el usuario actual (debe implementarse según tu sistema de autenticación)
+    obtenerUsuarioActual() {
+      // Implementación de ejemplo - reemplazar con tu lógica real
+      // Por ejemplo, podría ser una llamada a la API:
+      // axios.get('http://localhost:3001/api/usuario/actual')
+      //   .then(response => {
+      //     this.usuarioActual = response.data;
+      //   })
+      //   .catch(error => {
+      //     console.error('Error al obtener usuario:', error);
+      //   });
+      
+      // Por ahora, simularemos un usuario
+      this.usuarioActual = {
+        id: 1,
+        nombre: "Usuario de Prueba",
+        rol: "admin" // Cambia a "vendedor" para probar la restricción de pestañas
+      };
+    },
+    
+    // Método para limpiar todos los formularios
+    limpiarTodosLosFormularios() {
+      // Limpiar formulario de creación
+      this.nuevoCliente.nombre = '';
+      this.nuevoCliente.numero = '';
+      
+      // Limpiar búsqueda
+      this.idClienteBusqueda = '';
+      this.clienteEncontrado = null;
+
+      // Limpiar actualizar
+      this.idClienteActualizacion = '';
+      this.clienteEncontradoParaActualizar = null;
+      this.clienteParaActualizar = {
+        idCliente: '',
+        nombre: '',
+        numero: ''
+      };
+      
+      // Limpiar eliminación
+      this.clienteParaEliminar = {
+        idCliente: '',
+        motivo: ''
+      };
+      
+      // Limpiar datos de crédito
+      this.creditoConsulta = {
+        idCliente: ''
+      };
+      this.infoCredito = null;
+      this.abonoCredito = {
+        idCliente: '',
+        numeroFactura: '',
+        monto: ''
+      };
+      this.clienteDeuda = null;
+      this.facturaSeleccionada = null;
+    },
+    
     // Crear cliente
     async crearCliente() {
       try {
@@ -319,7 +433,7 @@ export default {
         this.nuevoCliente.nombre = '';
         this.nuevoCliente.numero = '';
       } catch (error) {
-        alert(error.response.data.error);
+        alert(error.response?.data?.error || 'Error al crear el cliente');
       }
     },
     
@@ -331,7 +445,7 @@ export default {
         });
         this.clienteEncontrado = response.data;
       } catch (error) {
-        alert(error.response.data.error);
+        alert(error.response?.data?.error || 'Error al buscar el cliente');
         this.clienteEncontrado = null;
       }
     },
@@ -352,7 +466,7 @@ export default {
           numero: response.data.numero
         };
       } catch (error) {
-        alert(error.response.data.error);
+        alert(error.response?.data?.error || 'Error al buscar el cliente');
         this.clienteEncontradoParaActualizar = null;
       }
     },
@@ -397,7 +511,7 @@ export default {
         alert(response.data.mensaje);
         this.clienteParaEliminar = { idCliente: '', motivo: '' };
       } catch (error) {
-        alert(error.response.data.error);
+        alert(error.response?.data?.error || 'Error al eliminar el cliente');
       }
     },
     
@@ -407,7 +521,7 @@ export default {
         const response = await axios.get('http://localhost:3001/api/clientes/todos');
         this.clientes = response.data;
       } catch (error) {
-        alert(error.response.data.error);
+        alert(error.response?.data?.error || 'Error al obtener los clientes');
       }
     },
     
@@ -551,6 +665,11 @@ export default {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
+}
+
+.tab-buttons button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(26, 35, 126, 0.4);
 }
 
 .tab-buttons button.active {
