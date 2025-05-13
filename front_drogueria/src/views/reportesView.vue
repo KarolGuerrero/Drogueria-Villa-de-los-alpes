@@ -189,7 +189,6 @@
 
 <script>
 import { onMounted, ref, nextTick } from 'vue';
-import { Chart } from 'chart.js';
 
 export default {
   name: 'ReportesView',
@@ -235,18 +234,6 @@ export default {
         console.error(error);
       } finally {
         this.cargando = false;
-      }
-    },
-
-    generarGrafico() {
-      if (!this.estadisticas || !this.estadisticas.inventarioActual) return;
-
-      // Extrae etiquetas (nombres de productos) y valores (cantidad en stock)
-      const labels = this.estadisticas.inventarioActual.map(item => item.nombre);
-      const values = this.estadisticas.inventarioActual.map(item => item.cantidadStock);
-
-      if (this.grafico) {
-        this.grafico.destroy(); // Elimina gráfico anterior si existe
       }
     },
 
